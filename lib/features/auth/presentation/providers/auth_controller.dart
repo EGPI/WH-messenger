@@ -27,14 +27,15 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    // We only have token persistence for now.
-    // Later you can add /me endpoint to restore full user safely.
-    state = const AuthState(
-      status: AuthStatus.authenticated,
-      user: null,
-      errorMessage: null,
-      isSubmitting: false,
-    );
+    try {
+      final user = await _authApi.me();
+
+      state = AuthState.authenticated(user);
+    } catch (_) {
+      await _storage.clearToken();
+
+      state = const AuthState.unauthenticated();
+    }
   }
 
   Future<bool> login({
