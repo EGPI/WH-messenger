@@ -7,6 +7,7 @@ import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/conversations/presentation/screens/conversations_screen.dart';
+import '../../features/messages/presentation/screens/message_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,6 +47,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ConversationsScreen.routePath,
         builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: MessageScreen.routePath,
+        builder: (context, state) {
+          final idText = state.pathParameters['conversationId'];
+          final conversationId = int.tryParse(idText ?? '');
+
+          if (conversationId == null) {
+            return const ConversationsScreen();
+          }
+
+          return MessageScreen(conversationId: conversationId);
+        },
       ),
     ],
   );

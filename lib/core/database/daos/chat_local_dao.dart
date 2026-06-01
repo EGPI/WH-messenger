@@ -82,20 +82,112 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     return (select(localMessages)
       ..where((t) => t.conversationId.equals(conversationId))
       ..orderBy([
+        // Server-confirmed messages first.
+        // Pending local messages have no serverId, so they go after server messages.
             (t) => OrderingTerm(
-          expression: t.serverSequence,
+          expression: t.serverId.isNull(),
           mode: OrderingMode.asc,
         ),
+
+        // Main ordering source from server.
             (t) => OrderingTerm(
-          expression: t.createdAt,
+          expression: t.serverId,
           mode: OrderingMode.asc,
         ),
+
+        // Stable local fallback only for pending local messages.
+        // This is not phone-clock based.
             (t) => OrderingTerm(
           expression: t.localId,
           mode: OrderingMode.asc,
         ),
       ]))
         .watch();
+  }
+
+  Future<int?> getOldestServerMessageId(int conversationId) async {
+    final row = await (select(localMessages)
+      ..where(
+            (t) =>
+        t.conversationId.equals(conversationId) &
+        t.serverId.isNotNull(),
+      )
+      ..orderBy([
+            (t) => OrderingTerm(
+          expression: t.serverId,
+          mode: OrderingMode.asc,
+        ),
+      ])
+      ..limit(1))
+        .getSingleOrNull();
+
+    return row?.serverId;
+  }
+
+  Future<void> upsertServerMessages(
+      List<LocalMessagesCompanion> messages,
+      ) async {
+    if (messages.isEmpty) return;
+
+    await batch((batch) {
+      batch.insertAllOnConflictUpdate(
+        localMessages,
+        messages,
+      );
+    });
+  }
+
+  Future<void> upsertServerMessageSafely(
+      LocalMessagesCompanion message, {
+        int? serverId,
+        String? clientMessageId,
+      }) async {
+    // 1. Prefer matching by client_message_id.
+    // This replaces a local pending message with the server-confirmed message.
+    if (clientMessageId != null && clientMessageId.isNotEmpty) {
+      final existingByClientMessageId =
+      await findMessageByClientMessageId(clientMessageId);
+
+      if (existingByClientMessageId != null) {
+        await (update(localMessages)
+          ..where((t) => t.localId.equals(existingByClientMessageId.localId)))
+            .write(message);
+        return;
+      }
+    }
+
+    // 2. Then match by server_id.
+    if (serverId != null) {
+      final existingByServerId = await findMessageByServerId(serverId);
+
+      if (existingByServerId != null) {
+        await (update(localMessages)
+          ..where((t) => t.localId.equals(existingByServerId.localId)))
+            .write(message);
+        return;
+      }
+    }
+
+    // 3. New server message.
+    await into(localMessages).insert(message);
+  }
+
+  Future<void> upsertServerMessagesSafely(
+      List<LocalMessagesCompanion> messages, {
+        required List<int?> serverIds,
+        required List<String?> clientMessageIds,
+      }) async {
+    if (messages.isEmpty) return;
+
+    await transaction(() async {
+      for (var i = 0; i < messages.length; i++) {
+        await upsertServerMessageSafely(
+          messages[i],
+          serverId: serverIds[i],
+          clientMessageId: clientMessageIds[i],
+        );
+      }
+    });
   }
 
   Future<void> insertPendingMessage({
