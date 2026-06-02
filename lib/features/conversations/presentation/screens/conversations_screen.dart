@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../messages/presentation/providers/message_screen_providers.dart';
+import '../../../messages/presentation/providers/outbox_connectivity_provider.dart';
+import '../../../realtime/presentation/providers/realtime_bootstrap_provider.dart';
+import '../../../sync/presentation/providers/chat_sync_bootstrap_provider.dart';
+import '../../../sync/presentation/providers/chat_sync_controller.dart';
 import '../providers/conversations_controller.dart';
 import '../providers/conversations_providers.dart';
 import '../widgets/conversation_tile.dart';
@@ -17,17 +23,46 @@ class ConversationsScreen extends ConsumerStatefulWidget {
 }
 
 class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
+  bool _scheduledClearOpenConversation = false;
+
   @override
   void initState() {
     super.initState();
 
-    Future.microtask(() {
-      ref.read(conversationsControllerProvider.notifier).syncConversations();
+    Future.microtask(() async {
+      await ref
+          .read(conversationsControllerProvider.notifier)
+          .syncConversations();
+
+      await ref.read(chatSyncControllerProvider.notifier).syncNow();
+    });
+  }
+
+  void _clearOpenConversationAfterBuild() {
+    if (_scheduledClearOpenConversation) return;
+
+    _scheduledClearOpenConversation = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      ref.read(openConversationIdProvider.notifier).state = null;
+
+      _scheduledClearOpenConversation = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Keep automatic retry/sync/realtime listeners alive while this screen is mounted.
+    ref.watch(outboxConnectivityBootstrapProvider);
+    ref.watch(chatSyncBootstrapProvider);
+    ref.watch(realtimeBootstrapProvider);
+
+    // Conversation list visible = no conversation is currently open.
+    // Delayed because Riverpod does not allow provider mutation during build.
+    _clearOpenConversationAfterBuild();
+
     ref.listen(
       conversationsControllerProvider.select((state) => state.errorMessage),
           (previous, next) {
@@ -45,7 +80,6 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
       appBar: AppBar(
         title: const Text('Chats'),
         actions: const [
-          _SyncButton(),
           _LogoutButton(),
         ],
       ),
@@ -55,33 +89,24 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
             return const _EmptyConversationsView();
           }
 
-          return RefreshIndicator(
-            onRefresh: () {
-              return ref
-                  .read(conversationsControllerProvider.notifier)
-                  .syncConversations();
-            },
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: conversations.length,
-              separatorBuilder: (_, _) => const Divider(
-                height: 1,
-                indent: 78,
-              ),
-              itemBuilder: (context, index) {
-                final conversation = conversations[index];
-
-                return ConversationTile(
-                  key: ValueKey(conversation.id),
-                  conversation: conversation,
-                  onTap: () {
-                    // Phase 11: navigate to message history screen.
-                    // context.go('/conversations/${conversation.id}');
-                    context.push('/conversations/${conversation.id}');
-                  },
-                );
-              },
+          return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: conversations.length,
+            separatorBuilder: (_, _) => const Divider(
+              height: 1,
+              indent: 78,
             ),
+            itemBuilder: (context, index) {
+              final conversation = conversations[index];
+
+              return ConversationTile(
+                key: ValueKey(conversation.id),
+                conversation: conversation,
+                onTap: () {
+                  context.push('/conversations/${conversation.id}');
+                },
+              );
+            },
           );
         },
         loading: () {
@@ -101,34 +126,6 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
   }
 }
 
-class _SyncButton extends ConsumerWidget {
-  const _SyncButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isSyncing = ref.watch(
-      conversationsControllerProvider.select((state) => state.isSyncing),
-    );
-
-    return IconButton(
-      tooltip: 'Sync conversations',
-      onPressed: isSyncing
-          ? null
-          : () {
-        ref
-            .read(conversationsControllerProvider.notifier)
-            .syncConversations();
-      },
-      icon: isSyncing
-          ? const SizedBox.square(
-        dimension: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      )
-          : const Icon(Icons.sync_rounded),
-    );
-  }
-}
-
 class _LogoutButton extends ConsumerWidget {
   const _LogoutButton();
 
@@ -137,6 +134,7 @@ class _LogoutButton extends ConsumerWidget {
     return IconButton(
       tooltip: 'Logout',
       onPressed: () {
+        ref.read(openConversationIdProvider.notifier).state = null;
         ref.read(authControllerProvider.notifier).logout();
       },
       icon: const Icon(Icons.logout_rounded),
@@ -144,53 +142,40 @@ class _LogoutButton extends ConsumerWidget {
   }
 }
 
-class _EmptyConversationsView extends ConsumerWidget {
+class _EmptyConversationsView extends StatelessWidget {
   const _EmptyConversationsView();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isSyncing = ref.watch(
-      conversationsControllerProvider.select((state) => state.isSyncing),
-    );
-
-    return RefreshIndicator(
-      onRefresh: () {
-        return ref
-            .read(conversationsControllerProvider.notifier)
-            .syncConversations();
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 140),
-          Icon(
-            Icons.chat_bubble_outline_rounded,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 18),
-          const Center(
-            child: Text(
-              'No conversations yet',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        const SizedBox(height: 140),
+        Icon(
+          Icons.chat_bubble_outline_rounded,
+          size: 64,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 18),
+        const Center(
+          child: Text(
+            'No conversations yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              isSyncing
-                  ? 'Syncing conversations...'
-                  : 'Pull down or tap sync to refresh.',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-              ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'New chats will appear here automatically.',
+            style: TextStyle(
+              color: Colors.grey.shade600,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

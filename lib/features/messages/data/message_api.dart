@@ -49,4 +49,49 @@ class MessageApi {
       '/conversations/$conversationId/read',
     );
   }
+
+  Future<void> markMessageDelivered({
+    required int messageId,
+  }) async {
+    await _dio.post(
+      '/messages/$messageId/delivered',
+    );
+  }
+
+  Future<ServerMessageModel> sendMessage({
+    required int conversationId,
+    required String clientMessageId,
+    required String body,
+  }) async {
+    final response = await _dio.post(
+      '/conversations/$conversationId/messages',
+      data: {
+        'client_message_id': clientMessageId,
+        'body': body,
+      },
+    );
+
+    final raw = response.data;
+
+    if (raw is! Map) {
+      throw Exception(
+        'Invalid send message response type: ${raw.runtimeType}',
+      );
+    }
+
+    final responseMap = Map<String, dynamic>.from(raw);
+
+    final rawMessage = responseMap['data'];
+
+    if (rawMessage is! Map) {
+      throw Exception(
+        'Invalid send message data type: ${rawMessage.runtimeType}',
+      );
+    }
+
+    return ServerMessageModel.fromJson(
+      Map<String, dynamic>.from(rawMessage),
+    );
+  }
+
 }

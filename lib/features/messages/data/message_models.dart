@@ -49,6 +49,7 @@ class ServerMessageModel {
   final int id;
   final int conversationId;
   final int senderId;
+  final int? serverSequence;
   final String? clientMessageId;
   final String type;
   final String body;
@@ -65,6 +66,7 @@ class ServerMessageModel {
     required this.conversationId,
     required this.senderId,
     required this.clientMessageId,
+    required this.serverSequence,
     required this.type,
     required this.body,
     required this.serverReceivedAt,
@@ -87,6 +89,7 @@ class ServerMessageModel {
       ),
       senderId: _requiredInt(json['sender_id'], 'message.sender_id'),
       clientMessageId: json['client_message_id']?.toString(),
+      serverSequence: _parseInt(json['server_sequence']),
       type: json['type']?.toString() ?? 'text',
       body: json['body']?.toString() ?? '',
       serverReceivedAt: _parseDateTime(json['server_received_at']),

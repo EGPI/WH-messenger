@@ -17,15 +17,14 @@ extension ServerMessageModelMapper on ServerMessageModel {
       status: Value(localStatus),
       clientMessageId: Value(clientMessageId),
 
-      // API has no server_sequence yet.
-      // Use message id as the stable server ordering value for now.
-      serverSequence: Value(id),
+      // Prefer real server_sequence if Laravel returns it.
+      // Fallback to id because your current message history endpoint orders by id.
+      serverSequence: Value(serverSequence ?? id),
 
-      // Required local DB field.
-      // This is not used for final message ordering.
+      // Required local DB field. Not used for final message ordering.
       createdAt: Value(safeServerReceivedAt),
 
-      serverReceivedAt: Value(serverReceivedAt ?? sentAt),
+      serverReceivedAt: Value(serverReceivedAt ?? sentAt ?? createdAt),
       deliveredAt: Value(firstDeliveredAt),
       readAt: Value(firstReadAt),
       locallyUpdatedAt: Value(DateTime.now()),

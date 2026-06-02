@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../auth/presentation/providers/auth_controller.dart';
+import '../../../realtime/presentation/providers/realtime_bootstrap_provider.dart';
+import '../../../sync/presentation/providers/chat_sync_bootstrap_provider.dart';
+import '../../../sync/presentation/providers/chat_sync_controller.dart';
 import '../providers/message_screen_controller.dart';
 import '../providers/message_screen_providers.dart';
+import '../providers/outbox_connectivity_provider.dart';
+import '../providers/outbox_retry_worker.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/message_input_bar.dart';
 import '../widgets/older_messages_loader.dart';
 
 class MessageScreen extends ConsumerStatefulWidget {
@@ -25,6 +32,8 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   late final ScrollController _scrollController;
 
   bool _didInitialOpen = false;
+  int _lastMessageCount = 0;
+  bool _clearedOpenConversation = false;
 
   @override
   void initState() {
@@ -42,6 +51,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       ..removeListener(_onScroll)
       ..dispose();
 
+    // Do not modify providers here.
+    // Provider cleanup happens from explicit navigation callbacks / post-frame PopScope.
+
     super.dispose();
   }
 
@@ -49,17 +61,21 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     if (_didInitialOpen) return;
 
     _didInitialOpen = true;
+    _clearedOpenConversation = false;
+
+    ref.read(openConversationIdProvider.notifier).state =
+        widget.conversationId;
 
     ref
         .read(messageScreenControllerProvider(widget.conversationId).notifier)
         .openConversation();
+
+    ref.read(chatSyncControllerProvider.notifier).syncNow();
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    // Top pagination.
-    // When user gets close to the top, fetch older messages.
     if (_scrollController.position.pixels <= 180) {
       ref
           .read(messageScreenControllerProvider(widget.conversationId).notifier)
@@ -67,71 +83,119 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     }
   }
 
+  void _clearOpenConversationNow() {
+    if (_clearedOpenConversation) return;
+
+    _clearedOpenConversation = true;
+
+    ref.read(openConversationIdProvider.notifier).state = null;
+  }
+
+  void _clearOpenConversationAfterFrame() {
+    if (_clearedOpenConversation) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      _clearOpenConversationNow();
+    });
+  }
+
+  void _closeConversationAndGoBack() {
+    _clearOpenConversationNow();
+
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/conversations');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      messageScreenControllerProvider(widget.conversationId)
-          .select((state) => state.errorMessage),
-          (previous, next) {
-        if (next == null || next == previous) return;
+    ref.watch(outboxConnectivityBootstrapProvider);
+    ref.watch(chatSyncBootstrapProvider);
+    ref.watch(realtimeBootstrapProvider);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next)),
-        );
+    ref.listen(
+      localMessagesProvider(widget.conversationId),
+          (previous, next) {
+        next.whenData((messages) {
+          if (messages.length <= _lastMessageCount) {
+            _lastMessageCount = messages.length;
+            return;
+          }
+
+          _lastMessageCount = messages.length;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!_scrollController.hasClients) return;
+
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+            );
+          });
+        });
       },
     );
 
     final conversationAsync =
     ref.watch(localConversationProvider(widget.conversationId));
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back to chats',
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/conversations');
-            }
-          },
-        ),
-        titleSpacing: 0,
-        title: conversationAsync.when(
-          data: (conversation) {
-            return _MessageAppBarTitle(
-              title: _conversationTitle(
-                type: conversation?.type,
-                title: conversation?.title,
-              ),
-              subtitle: _conversationSubtitle(conversation?.type),
-            );
-          },
-          loading: () {
-            return const _MessageAppBarTitle(
-              title: 'Chat',
-              subtitle: 'Loading...',
-            );
-          },
-          error: (_, _) {
-            return const _MessageAppBarTitle(
-              title: 'Chat',
-              subtitle: '',
-            );
-          },
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _MessagesList(
-              conversationId: widget.conversationId,
-              scrollController: _scrollController,
-            ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) return;
+
+        _clearOpenConversationAfterFrame();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: 'Back to chats',
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _closeConversationAndGoBack,
           ),
-          const _TemporaryInputPlaceholder(),
-        ],
+          titleSpacing: 0,
+          title: conversationAsync.when(
+            data: (conversation) {
+              return _MessageAppBarTitle(
+                title: _conversationTitle(
+                  type: conversation?.type,
+                  title: conversation?.title,
+                ),
+                subtitle: _conversationSubtitle(conversation?.type),
+              );
+            },
+            loading: () {
+              return const _MessageAppBarTitle(
+                title: 'Chat',
+                subtitle: 'Loading...',
+              );
+            },
+            error: (_, _) {
+              return const _MessageAppBarTitle(
+                title: 'Chat',
+                subtitle: '',
+              );
+            },
+          ),
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: _MessagesList(
+                conversationId: widget.conversationId,
+                scrollController: _scrollController,
+              ),
+            ),
+            MessageInputBar(
+              conversationId: widget.conversationId,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -171,15 +235,16 @@ class _MessageAppBarTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         CircleAvatar(
           radius: 19,
-          backgroundColor:
-          Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
           child: Icon(
             Icons.person_rounded,
-            color: Theme.of(context).colorScheme.primary,
+            color: colorScheme.primary,
             size: 21,
           ),
         ),
@@ -216,7 +281,6 @@ class _MessageAppBarTitle extends StatelessWidget {
     );
   }
 }
-
 
 class _MessagesList extends ConsumerWidget {
   final int conversationId;
@@ -270,16 +334,28 @@ class _MessagesList extends ConsumerWidget {
                   }
 
                   final message = messages[index - 1];
+
                   final isMine =
                       currentUserId != null && message.senderId == currentUserId;
 
                   return MessageBubble(
                     key: ValueKey(
-                      message.serverId ?? message.clientMessageId ?? message.localId,
+                      message.serverId ??
+                          message.clientMessageId ??
+                          message.localId,
                     ),
                     message: message,
                     isMine: isMine,
                     showSenderName: false,
+                    onRetry: message.clientMessageId == null
+                        ? null
+                        : () {
+                      ref
+                          .read(outboxRetryWorkerProvider.notifier)
+                          .retryFailedMessage(
+                        clientMessageId: message.clientMessageId!,
+                      );
+                    },
                   );
                 },
               ),
@@ -336,20 +412,20 @@ class _EmptyMessagesView extends StatelessWidget {
                 size: 58,
                 color: Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'No messages yet',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 'Messages will appear here after this conversation starts.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: Colors.grey,
                   height: 1.35,
                 ),
               ),
@@ -370,59 +446,6 @@ class _MessagesLocalErrorView extends StatelessWidget {
       color: Color(0xFFF7FAFF),
       child: Center(
         child: Text('Could not load local messages.'),
-      ),
-    );
-  }
-}
-
-class _TemporaryInputPlaceholder extends StatelessWidget {
-  const _TemporaryInputPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade200,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 44,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F7FF),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Message input comes next...',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(
-                Icons.send_rounded,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

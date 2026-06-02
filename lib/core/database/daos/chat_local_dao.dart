@@ -74,6 +74,8 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
+
+
   // ---------------------------------------------------------------------------
   // Messages
   // ---------------------------------------------------------------------------
@@ -103,6 +105,64 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
         ),
       ]))
         .watch();
+  }
+
+  Future<void> markLocalMessageDelivered({
+    required int serverId,
+    required DateTime deliveredAt,
+  }) async {
+    final message = await findMessageByServerId(serverId);
+
+    if (message == null) return;
+
+    // Never downgrade read back to delivered.
+    if (message.status == 'read') return;
+
+    await (update(localMessages)..where((t) => t.serverId.equals(serverId)))
+        .write(
+      LocalMessagesCompanion(
+        status: const Value('delivered'),
+        deliveredAt: Value(deliveredAt),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> markLocalMessageRead({
+    required int serverId,
+    required DateTime readAt,
+  }) {
+    return (update(localMessages)..where((t) => t.serverId.equals(serverId)))
+        .write(
+      LocalMessagesCompanion(
+        status: const Value('read'),
+        readAt: Value(readAt),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> markMyMessagesReadUpTo({
+    required int conversationId,
+    required int currentUserId,
+    required int lastReadMessageId,
+    required DateTime readAt,
+  }) {
+    return (update(localMessages)
+      ..where(
+            (t) =>
+        t.conversationId.equals(conversationId) &
+        t.senderId.equals(currentUserId) &
+        t.serverId.isNotNull() &
+        t.serverId.isSmallerOrEqualValue(lastReadMessageId),
+      ))
+        .write(
+      LocalMessagesCompanion(
+        status: const Value('read'),
+        readAt: Value(readAt),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
   }
 
   Future<int?> getOldestServerMessageId(int conversationId) async {
@@ -220,6 +280,23 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
           updatedAt: Value(now),
         ),
       );
+
+      // Local-only optimistic conversation preview.
+      // This makes the conversation list update immediately like WhatsApp/Telegram.
+      await (update(localConversations)
+        ..where((t) => t.id.equals(conversationId)))
+          .write(
+        LocalConversationsCompanion(
+          lastMessagePreview: Value(body),
+          lastMessageSenderId: Value(senderId),
+
+          // Temporary local value so the pending conversation can move up.
+          // It will be replaced with serverReceivedAt when the server confirms.
+          lastMessageAt: Value(now),
+
+          locallyUpdatedAt: Value(now),
+        ),
+      );
     });
   }
 
@@ -230,6 +307,8 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required DateTime serverReceivedAt,
   }) async {
     await transaction(() async {
+      final existingMessage = await findMessageByClientMessageId(clientMessageId);
+
       await (update(localMessages)
         ..where((t) => t.clientMessageId.equals(clientMessageId)))
           .write(
@@ -245,6 +324,20 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       await (delete(localOutbox)
         ..where((t) => t.clientMessageId.equals(clientMessageId)))
           .go();
+
+      if (existingMessage != null) {
+        await (update(localConversations)
+          ..where((t) => t.id.equals(existingMessage.conversationId)))
+            .write(
+          LocalConversationsCompanion(
+            lastMessageId: Value(serverId),
+            lastMessagePreview: Value(existingMessage.body),
+            lastMessageSenderId: Value(existingMessage.senderId),
+            lastMessageAt: Value(serverReceivedAt),
+            locallyUpdatedAt: Value(DateTime.now()),
+          ),
+        );
+      }
     });
   }
 
@@ -289,6 +382,108 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   Future<LocalMessage?> findMessageByServerId(int serverId) {
     return (select(localMessages)..where((t) => t.serverId.equals(serverId)))
         .getSingleOrNull();
+  }
+
+  Future<LocalConversation?> findConversationById(int conversationId) {
+    return (select(localConversations)
+      ..where((t) => t.id.equals(conversationId)))
+        .getSingleOrNull();
+  }
+
+  Future<bool> applySyncedMessageCreated({
+    required LocalMessagesCompanion message,
+    required int serverId,
+    required String? clientMessageId,
+    required int conversationId,
+    required int senderId,
+    required String body,
+    required DateTime? serverReceivedAt,
+    required bool incrementUnread,
+  }) async {
+    var insertedNewMessage = false;
+
+    await transaction(() async {
+      final existingByServerId = await findMessageByServerId(serverId);
+
+      final existingByClientMessageId =
+      clientMessageId == null || clientMessageId.isEmpty
+          ? null
+          : await findMessageByClientMessageId(clientMessageId);
+
+      final alreadyExists = existingByServerId != null ||
+          existingByClientMessageId != null;
+
+      insertedNewMessage = !alreadyExists;
+
+      await upsertServerMessageSafely(
+        message,
+        serverId: serverId,
+        clientMessageId: clientMessageId,
+      );
+
+      final currentConversation = await findConversationById(conversationId);
+
+      if (currentConversation != null) {
+        await (update(localConversations)
+          ..where((t) => t.id.equals(conversationId)))
+            .write(
+          LocalConversationsCompanion(
+            lastMessageId: Value(serverId),
+            lastMessagePreview: Value(body),
+            lastMessageSenderId: Value(senderId),
+            lastMessageAt: Value(serverReceivedAt),
+            unreadCount: incrementUnread && insertedNewMessage
+                ? Value(currentConversation.unreadCount + 1)
+                : Value(currentConversation.unreadCount),
+            locallyUpdatedAt: Value(DateTime.now()),
+          ),
+        );
+      }
+    });
+
+    return insertedNewMessage;
+  }
+
+  Future<bool> hasAlreadyAppliedEvent(int eventId) async {
+    final lastEventId = await getLastEventId();
+    return eventId <= lastEventId;
+  }
+
+  Future<void> applyConversationUpdated({
+    required int conversationId,
+    required String? type,
+    required String? title,
+    required int? lastMessageId,
+    required String? lastMessagePreview,
+    required DateTime? lastMessageAt,
+    required int? lastMessageSenderId,
+    required int? unreadCount,
+    required String? myRole,
+    required DateTime? updatedAt,
+  }) async {
+    final existing = await findConversationById(conversationId);
+
+    if (existing == null) {
+      return;
+    }
+
+    await (update(localConversations)
+      ..where((t) => t.id.equals(conversationId)))
+        .write(
+      LocalConversationsCompanion(
+        type: type == null ? const Value.absent() : Value(type),
+        title: Value(title),
+        lastMessageId: Value(lastMessageId),
+        lastMessagePreview: Value(lastMessagePreview),
+        lastMessageAt: Value(lastMessageAt),
+        lastMessageSenderId: Value(lastMessageSenderId),
+        unreadCount:
+        unreadCount == null ? const Value.absent() : Value(unreadCount),
+        myRole: Value(myRole),
+        updatedAt: Value(updatedAt),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -337,6 +532,77 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
         updatedAt: Value(DateTime.now()),
       ),
     );
+  }
+
+  Future<void> markFailedMessagePendingAgain({
+    required String clientMessageId,
+  }) async {
+    final now = DateTime.now();
+
+    await transaction(() async {
+      await (update(localMessages)
+        ..where((t) => t.clientMessageId.equals(clientMessageId)))
+          .write(
+        LocalMessagesCompanion(
+          status: const Value('pending'),
+          locallyUpdatedAt: Value(now),
+        ),
+      );
+
+      await (update(localOutbox)
+        ..where((t) => t.clientMessageId.equals(clientMessageId)))
+          .write(
+        LocalOutboxCompanion(
+          status: const Value('pending'),
+          lastError: const Value(null),
+          nextRetryAt: const Value(null),
+          updatedAt: Value(now),
+        ),
+      );
+    });
+  }
+
+  Future<void> markOutboxPending({
+    required String clientMessageId,
+    DateTime? nextRetryAt,
+    String? lastError,
+  }) {
+    return (update(localOutbox)
+      ..where((t) => t.clientMessageId.equals(clientMessageId)))
+        .write(
+      LocalOutboxCompanion(
+        status: const Value('pending'),
+        nextRetryAt: Value(nextRetryAt),
+        lastError: Value(lastError),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<List<LocalOutboxData>> getRetryablePendingOutboxItems({
+    int limit = 20,
+  }) {
+    final now = DateTime.now();
+
+    return (select(localOutbox)
+      ..where(
+            (t) =>
+        t.status.equals('pending') &
+        (t.nextRetryAt.isNull() | t.nextRetryAt.isSmallerOrEqualValue(now)),
+      )
+      ..orderBy([
+            (t) => OrderingTerm.asc(t.createdAt),
+      ])
+      ..limit(limit))
+        .get();
+  }
+
+  Future<int> getConversationUnreadCount(int conversationId) async {
+    final row = await (select(localConversations)
+      ..where((t) => t.id.equals(conversationId)))
+        .getSingleOrNull();
+
+    return row?.unreadCount ?? 0;
   }
 
   // ---------------------------------------------------------------------------

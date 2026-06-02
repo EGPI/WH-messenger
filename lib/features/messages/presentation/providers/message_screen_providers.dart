@@ -9,6 +9,10 @@ StreamProvider.family<List<LocalMessage>, int>((ref, conversationId) {
   return dao.watchMessages(conversationId);
 });
 
+final openConversationIdProvider = StateProvider<int?>((ref) {
+  return null;
+});
+
 final localConversationProvider =
 StreamProvider.family<LocalConversation?, int>((ref, conversationId) {
   final database = ref.watch(appDatabaseProvider);

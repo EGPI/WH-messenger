@@ -7,12 +7,14 @@ class MessageBubble extends StatelessWidget {
   final LocalMessage message;
   final bool isMine;
   final bool showSenderName;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isMine,
     required this.showSenderName,
+    this.onRetry,
   });
 
   @override
@@ -29,8 +31,10 @@ class MessageBubble extends StatelessWidget {
     );
 
     return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: RepaintBoundary(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+        child: GestureDetector(
+          onTap: isMine && message.status == 'failed' ? onRetry : null,
+          child: RepaintBoundary(
         child: Container(
           margin: EdgeInsets.only(
             left: isMine ? 54 : 12,
@@ -96,6 +100,7 @@ class MessageBubble extends StatelessWidget {
           ),
         ),
       ),
+          )
     );
   }
 }
@@ -131,7 +136,21 @@ class _BubbleFooter extends StatelessWidget {
           ),
         if (isMine) ...[
           const SizedBox(width: 4),
-          MessageStatusIcon(status: message.status),
+          MessageStatusIcon(
+            status: message.status,
+            isMine: isMine,
+          ),
+          if (message.status == 'failed') ...[
+            const SizedBox(width: 4),
+            const Text(
+              'Tap to retry',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ],
     );
