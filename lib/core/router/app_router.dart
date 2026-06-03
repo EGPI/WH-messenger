@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../features/conversations/presentation/screens/new_group_chat_screen.dart';
+import '../../features/conversations/presentation/screens/new_direct_chat_screen.dart';
+import '../../features/conversations/presentation/screens/new_announcement_chat_screen.dart';
 import '../../features/auth/presentation/providers/auth_controller.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -60,6 +62,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           return MessageScreen(conversationId: conversationId);
         },
+      ),
+      GoRoute(
+        path: NewDirectChatScreen.routePath,
+        builder: (context, state) => const NewDirectChatScreen(),
+      ),
+      GoRoute(
+        path: NewGroupChatScreen.routePath,
+        builder: (context, state) => const NewGroupChatScreen(),
+      ),
+      GoRoute(
+        path: NewAnnouncementChatScreen.routePath,
+        builder: (context, state) => const NewAnnouncementChatScreen(),
       ),
     ],
   );

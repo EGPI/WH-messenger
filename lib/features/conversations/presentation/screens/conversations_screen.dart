@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'new_direct_chat_screen.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../messages/presentation/providers/message_screen_providers.dart';
 import '../../../messages/presentation/providers/outbox_connectivity_provider.dart';
@@ -119,6 +119,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Later: open user search / create conversation flow.
+          context.push(NewDirectChatScreen.routePath);
         },
         child: const Icon(Icons.chat_rounded),
       ),

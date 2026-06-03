@@ -30,6 +30,10 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
           expression: t.lastMessageAt,
           mode: OrderingMode.desc,
         ),
+            (t) => OrderingTerm(
+          expression: t.locallyUpdatedAt,
+          mode: OrderingMode.desc,
+        ),
       ]))
         .watch();
   }
