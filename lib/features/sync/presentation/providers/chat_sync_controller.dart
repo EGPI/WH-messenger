@@ -293,6 +293,11 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       return;
     }
 
+    final openConversationId = ref.read(openConversationIdProvider);
+    final isOpenConversation = openConversationId == conversationId;
+
+    final incomingUnreadCount = _parseInt(payload['unread_count']);
+
     await _dao.applyConversationUpdated(
       conversationId: conversationId,
       type: payload['type']?.toString(),
@@ -301,7 +306,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       lastMessagePreview: payload['last_message_preview']?.toString(),
       lastMessageAt: _parseDateTime(payload['last_message_at']),
       lastMessageSenderId: _parseInt(payload['last_message_sender_id']),
-      unreadCount: _parseInt(payload['unread_count']),
+      unreadCount: isOpenConversation ? 0 : incomingUnreadCount,
       myRole: payload['my_role']?.toString(),
       updatedAt: _parseDateTime(payload['updated_at']),
     );
