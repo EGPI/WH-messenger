@@ -222,54 +222,6 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
     }
   }
 
-  bool _shouldMarkSendFailed(Object error) {
-    if (error is! DioException) {
-      return true;
-    }
-
-    final statusCode = error.response?.statusCode;
-
-    // Validation / permission / membership errors should not retry forever.
-    if (statusCode == 400 ||
-        statusCode == 401 ||
-        statusCode == 403 ||
-        statusCode == 404 ||
-        statusCode == 422) {
-      return true;
-    }
-
-    // No internet, timeout, or server error should remain pending for retry.
-    return false;
-  }
-
-  String _sendErrorMessage(Object error) {
-    if (error is DioException) {
-      final statusCode = error.response?.statusCode;
-      final data = error.response?.data;
-
-      if (data is Map<String, dynamic>) {
-        final message = data['message'];
-
-        if (message is String && message.isNotEmpty) {
-          return message;
-        }
-      }
-
-      if (error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.receiveTimeout ||
-          error.type == DioExceptionType.sendTimeout ||
-          error.type == DioExceptionType.connectionError) {
-        return 'Message saved locally. It will be retried later.';
-      }
-
-      if (statusCode != null && statusCode >= 500) {
-        return 'Server unavailable. Message will be retried later.';
-      }
-    }
-
-    return 'Could not send message.';
-  }
-
   String _friendlyError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;

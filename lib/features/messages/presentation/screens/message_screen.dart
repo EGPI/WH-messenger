@@ -56,6 +56,30 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
     super.dispose();
   }
+  bool _isNearBottom() {
+    if (!_scrollController.hasClients) return true;
+
+    // With reverse:true, bottom/latest messages are at pixels 0.
+    return _scrollController.position.pixels <= 120;
+  }
+
+  void _scrollToBottom({
+    bool animated = true,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+
+      if (animated) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(0);
+      }
+    });
+  }
 
   void _openConversationOnce() {
     if (_didInitialOpen) return;
@@ -70,13 +94,14 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         .read(messageScreenControllerProvider(widget.conversationId).notifier)
         .openConversation();
 
-    ref.read(chatSyncControllerProvider.notifier).syncNow();
+    //ref.read(chatSyncControllerProvider.notifier).syncNow();
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    if (_scrollController.position.pixels <= 180) {
+    // With reverse:true, older messages are near maxScrollExtent.
+    if (_scrollController.position.extentAfter <= 180) {
       ref
           .read(messageScreenControllerProvider(widget.conversationId).notifier)
           .loadOlderMessages();
@@ -114,29 +139,21 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(outboxConnectivityBootstrapProvider);
-    ref.watch(chatSyncBootstrapProvider);
+    //ref.watch(chatSyncBootstrapProvider);
     ref.watch(realtimeBootstrapProvider);
 
     ref.listen(
       localMessagesProvider(widget.conversationId),
           (previous, next) {
         next.whenData((messages) {
-          if (messages.length <= _lastMessageCount) {
-            _lastMessageCount = messages.length;
-            return;
-          }
+          final hadNewMessage = messages.length > _lastMessageCount;
+          final shouldStayAtBottom = _lastMessageCount == 0 || _isNearBottom();
 
           _lastMessageCount = messages.length;
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!_scrollController.hasClients) return;
+          if (!hadNewMessage || !shouldStayAtBottom) return;
 
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-            );
-          });
+          _scrollToBottom(animated: _lastMessageCount > 1);
         });
       },
     );
@@ -318,22 +335,22 @@ class _MessagesList extends ConsumerWidget {
               color: const Color(0xFFF7FAFF),
               child: ListView.builder(
                 controller: scrollController,
-                keyboardDismissBehavior:
-                ScrollViewKeyboardDismissBehavior.onDrag,
+                reverse: true,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
                 padding: const EdgeInsets.only(
                   top: 8,
                   bottom: 12,
                 ),
                 itemCount: messages.length + 1,
                 itemBuilder: (context, index) {
-                  if (index == 0) {
+                  if (index == messages.length) {
                     return OlderMessagesLoader(
                       isLoadingOlder: controllerState.isLoadingOlder,
                       hasMoreOlder: controllerState.hasMoreOlder,
                     );
                   }
 
-                  final message = messages[index - 1];
+                  final message = messages[messages.length - 1 - index];
 
                   final isMine =
                       currentUserId != null && message.senderId == currentUserId;
@@ -360,13 +377,6 @@ class _MessagesList extends ConsumerWidget {
                 },
               ),
             ),
-            if (controllerState.isInitialSyncing)
-              const Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
           ],
         );
       },
