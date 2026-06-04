@@ -21,3 +21,80 @@ StreamProvider.family<LocalConversation?, int>((ref, conversationId) {
     ..where((t) => t.id.equals(conversationId)))
       .watchSingleOrNull();
 });
+
+const String announcementSendBlockedReason =
+    'Only admins and owners can send messages in announcement chats.';
+
+class MessageSendPermission {
+  final bool canSend;
+  final String? blockedReason;
+
+  const MessageSendPermission._({
+    required this.canSend,
+    required this.blockedReason,
+  });
+
+  const MessageSendPermission.canSend()
+      : this._(
+    canSend: true,
+    blockedReason: null,
+  );
+
+  const MessageSendPermission.blocked(String reason)
+      : this._(
+    canSend: false,
+    blockedReason: reason,
+  );
+
+  factory MessageSendPermission.fromConversation({
+    required String? type,
+    required String? myRole,
+  }) {
+    final normalizedType = type?.trim().toLowerCase();
+    final normalizedRole = myRole?.trim().toLowerCase();
+
+    final isAnnouncement = normalizedType == 'announcement';
+    final isAdminOrOwner =
+        normalizedRole == 'admin' || normalizedRole == 'owner';
+
+    if (isAnnouncement && !isAdminOrOwner) {
+      return const MessageSendPermission.blocked(
+        announcementSendBlockedReason,
+      );
+    }
+
+    return const MessageSendPermission.canSend();
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is MessageSendPermission &&
+            runtimeType == other.runtimeType &&
+            canSend == other.canSend &&
+            blockedReason == other.blockedReason;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    canSend,
+    blockedReason,
+  );
+}
+
+final messageSendPermissionProvider =
+Provider.family<MessageSendPermission, int>((ref, conversationId) {
+  final conversationAsync = ref.watch(
+    localConversationProvider(conversationId),
+  );
+
+  return conversationAsync.maybeWhen(
+    data: (conversation) {
+      return MessageSendPermission.fromConversation(
+        type: conversation?.type,
+        myRole: conversation?.myRole,
+      );
+    },
+    orElse: () => const MessageSendPermission.canSend(),
+  );
+});

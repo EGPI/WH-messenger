@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../providers/message_screen_controller.dart';
+import '../providers/message_screen_providers.dart';
 
 class MessageInputBar extends ConsumerStatefulWidget {
   final int conversationId;
@@ -54,6 +57,23 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
   }
 
   Future<void> _send() async {
+    final permission = ref.read(
+      messageSendPermissionProvider(widget.conversationId),
+    );
+
+    if (!permission.canSend) {
+      _focusNode.unfocus();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            permission.blockedReason ?? announcementSendBlockedReason,
+          ),
+        ),
+      );
+      return;
+    }
+
     final text = _controller.text;
     final trimmed = text.trim();
 
@@ -86,64 +106,167 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final isSending = ref.watch(
       messageScreenControllerProvider(widget.conversationId)
           .select((state) => state.isSending),
     );
 
+    final sendPermission = ref.watch(
+      messageSendPermissionProvider(widget.conversationId),
+    );
+
+    final canSend = sendPermission.canSend;
+
     return SafeArea(
       top: false,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade200,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.82),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.045),
+                  blurRadius: 24,
+                  offset: const Offset(0, -10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!canSend)
+                  _SendBlockedReasonBanner(
+                    message: sendPermission.blockedReason ??
+                        announcementSendBlockedReason,
+                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: canSend
+                              ? Colors.white.withValues(alpha: 0.94)
+                              : const Color(0xFFF3F6FA),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: canSend
+                                ? const Color(0xFFE4ECF7)
+                                : const Color(0xFFD8E2EF),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.035),
+                              blurRadius: 14,
+                              offset: const Offset(0, 7),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          enabled: canSend,
+                          minLines: 1,
+                          maxLines: 5,
+                          textInputAction: TextInputAction.newline,
+                          keyboardType: TextInputType.multiline,
+                          style: const TextStyle(
+                            color: Color(0xFF102033),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            height: 1.28,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: canSend
+                                ? 'Type a message...'
+                                : 'Read-only announcement',
+                            hintStyle: const TextStyle(
+                              color: Color(0xFF8A98AA),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 17,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    _SendButton(
+                      enabled: canSend && _hasText,
+                      isSending: isSending,
+                      onPressed: _send,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F7FF),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: Colors.blue.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  minLines: 1,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.newline,
-                  keyboardType: TextInputType.multiline,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 11,
-                    ),
-                  ),
-                ),
+      ),
+    );
+  }
+}
+
+class _SendBlockedReasonBanner extends StatelessWidget {
+  final String message;
+
+  const _SendBlockedReasonBanner({
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 13,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lock_outline_rounded,
+            size: 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                height: 1.25,
               ),
             ),
-            const SizedBox(width: 8),
-            _SendButton(
-              enabled: _hasText,
-              isSending: isSending,
-              onPressed: _send,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -164,27 +287,57 @@ class _SendButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Material(
-      color: enabled ? colorScheme.primary : Colors.grey.shade300,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: enabled ? onPressed : null,
-        child: SizedBox.square(
-          dimension: 44,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: enabled
+            ? LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.primary,
+            const Color(0xFF0D47A1),
+          ],
+        )
+            : null,
+        color: enabled ? null : const Color(0xFFD5DEEA),
+        boxShadow: enabled
+            ? [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onPressed : null,
           child: Center(
-            child: isSending
-                ? const SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: isSending
+                  ? const SizedBox.square(
+                key: ValueKey('sending'),
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+                  : const Icon(
+                Icons.send_rounded,
+                key: ValueKey('send'),
                 color: Colors.white,
+                size: 21,
               ),
-            )
-                : const Icon(
-              Icons.send_rounded,
-              color: Colors.white,
-              size: 21,
             ),
           ),
         ),

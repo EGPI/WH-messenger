@@ -14,32 +14,97 @@ class OlderMessagesLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoadingOlder) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 14),
+        padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
-          child: SizedBox.square(
-            dimension: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: _OlderMessagesLoadingPill(),
         ),
       );
     }
 
     if (!hasMoreOlder) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
-          child: Text(
-            'No older messages',
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: _OlderMessagesEndPill(),
         ),
       );
     }
 
     return const SizedBox(height: 8);
+  }
+}
+
+class _OlderMessagesLoadingPill extends StatelessWidget {
+  const _OlderMessagesLoadingPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 9,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.94),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.045),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 9),
+          Text(
+            'Loading older messages',
+            style: TextStyle(
+              color: Color(0xFF6B7A90),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OlderMessagesEndPill extends StatelessWidget {
+  const _OlderMessagesEndPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 13,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.86),
+        ),
+      ),
+      child: const Text(
+        'No older messages',
+        style: TextStyle(
+          color: Color(0xFF8A98AA),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }

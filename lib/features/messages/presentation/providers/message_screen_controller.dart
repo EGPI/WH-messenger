@@ -6,6 +6,7 @@ import '../../data/message_send_error_classifier.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../data/message_api.dart';
 import '../../data/message_mappers.dart';
+import 'message_screen_providers.dart';
 import 'message_screen_state.dart';
 import '../../../../core/database/daos/chat_local_dao.dart';
 
@@ -154,6 +155,19 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
     if (trimmedBody.isEmpty) {
       state = state.copyWith(
         errorMessage: 'Message cannot be empty.',
+      );
+      return;
+    }
+    final conversation = await dao.findConversationById(conversationId);
+
+    final permission = MessageSendPermission.fromConversation(
+      type: conversation?.type,
+      myRole: conversation?.myRole,
+    );
+
+    if (!permission.canSend) {
+      state = state.copyWith(
+        errorMessage: permission.blockedReason ?? announcementSendBlockedReason,
       );
       return;
     }
