@@ -5,6 +5,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/network/dio_provider.dart';
 import 'conversation_models.dart';
 import 'user_search_models.dart';
+import 'conversation_details_models.dart';
 
 class ConversationApi {
   final Dio _dio;
@@ -96,6 +97,75 @@ class ConversationApi {
 
     return ConversationSummaryModel.fromJson(data);
   }
+
+  Future<ConversationDetailsModel> fetchConversationDetails({
+    required int conversationId,
+  }) async {
+    final response = await _dio.get(
+      ApiConstants.conversationDetails(conversationId),
+    );
+
+    final parsed = ConversationDetailsResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+
+    return parsed.data;
+  }
+
+  Future<ConversationParticipantModel> addMember({
+    required int conversationId,
+    required int userId,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.conversationMembers(conversationId),
+      data: {
+        'user_id': userId,
+      },
+    );
+
+    final parsed = ConversationMemberActionResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+
+    return parsed.data.copyWith(conversationId: conversationId);
+  }
+
+  Future<ConversationParticipantModel> removeMember({
+    required int conversationId,
+    required int userId,
+  }) async {
+    final response = await _dio.delete(
+      ApiConstants.conversationMember(
+        conversationId: conversationId,
+        userId: userId,
+      ),
+    );
+
+    final parsed = ConversationMemberActionResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+
+    return parsed.data.copyWith(conversationId: conversationId);
+  }
+
+  Future<ConversationParticipantModel> promoteMember({
+    required int conversationId,
+    required int userId,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.conversationAdmin(
+        conversationId: conversationId,
+        userId: userId,
+      ),
+    );
+
+    final parsed = ConversationMemberActionResponse.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+
+    return parsed.data.copyWith(conversationId: conversationId);
+  }
+
 }
 
 final conversationApiProvider = Provider<ConversationApi>((ref) {

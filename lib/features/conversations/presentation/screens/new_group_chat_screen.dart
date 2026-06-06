@@ -96,6 +96,7 @@ class _NewGroupChatScreenState extends ConsumerState<NewGroupChatScreen> {
         _titleController.text.trim().isNotEmpty && !state.isCreating;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('New group'),

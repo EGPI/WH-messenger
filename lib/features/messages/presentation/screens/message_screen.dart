@@ -197,6 +197,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 ),
                 subtitle: _conversationSubtitle(type),
                 type: type,
+                onTap: () {
+                  context.push('/conversations/${widget.conversationId}/details');
+                },
               );
             },
             loading: () {
@@ -267,11 +270,13 @@ class _MessageAppBarTitle extends StatelessWidget {
   final String title;
   final String subtitle;
   final String? type;
+  final VoidCallback? onTap;
 
   const _MessageAppBarTitle({
     required this.title,
     required this.subtitle,
     required this.type,
+    this.onTap,
   });
 
   @override
@@ -279,8 +284,18 @@ class _MessageAppBarTitle extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final icon = _iconForType(type);
 
-    return Row(
-      children: [
+    return Material(
+        color: Colors.transparent,
+        child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
         Container(
           width: 42,
           height: 42,
@@ -343,6 +358,9 @@ class _MessageAppBarTitle extends StatelessWidget {
           ),
         ),
       ],
+    )
+            ),
+        )
     );
   }
 

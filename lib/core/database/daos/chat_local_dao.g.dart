@@ -9,6 +9,9 @@ mixin _$ChatLocalDaoMixin on DatabaseAccessor<AppDatabase> {
   $LocalMessagesTable get localMessages => attachedDatabase.localMessages;
   $LocalOutboxTable get localOutbox => attachedDatabase.localOutbox;
   $LocalSyncStateTable get localSyncState => attachedDatabase.localSyncState;
+  $LocalUsersTable get localUsers => attachedDatabase.localUsers;
+  $LocalConversationParticipantsTable get localConversationParticipants =>
+      attachedDatabase.localConversationParticipants;
   ChatLocalDaoManager get managers => ChatLocalDaoManager(this);
 }
 
@@ -28,5 +31,13 @@ class ChatLocalDaoManager {
       $$LocalSyncStateTableTableManager(
         _db.attachedDatabase,
         _db.localSyncState,
+      );
+  $$LocalUsersTableTableManager get localUsers =>
+      $$LocalUsersTableTableManager(_db.attachedDatabase, _db.localUsers);
+  $$LocalConversationParticipantsTableTableManager
+  get localConversationParticipants =>
+      $$LocalConversationParticipantsTableTableManager(
+        _db.attachedDatabase,
+        _db.localConversationParticipants,
       );
 }

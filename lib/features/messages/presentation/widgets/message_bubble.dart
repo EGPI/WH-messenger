@@ -19,6 +19,10 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (message.type == 'system') {
+      return _SystemMessageRow(message: message);
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
 
     final borderRadius = BorderRadius.only(
@@ -107,6 +111,62 @@ class MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SystemMessageRow extends StatelessWidget {
+  final LocalMessage message;
+
+  const _SystemMessageRow({
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final body = message.body.trim();
+
+    if (body.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Center(
+      child: RepaintBoundary(
+        child: Container(
+          margin: const EdgeInsets.symmetric(
+            horizontal: 28,
+            vertical: 7,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 13,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.035),
+                blurRadius: 14,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Text(
+            body,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF6B7A90),
+              fontSize: 12.5,
+              height: 1.25,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),

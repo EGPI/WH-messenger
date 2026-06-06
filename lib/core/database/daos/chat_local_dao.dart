@@ -4,6 +4,8 @@ import '../app_database.dart';
 import '../tables/local_conversations.dart';
 import '../tables/local_messages.dart';
 import '../tables/local_outbox.dart';
+import '../tables/local_conversation_participants.dart';
+import '../tables/local_users.dart';
 import '../tables/local_sync_state.dart';
 part 'chat_local_dao.g.dart';
 
@@ -13,6 +15,8 @@ part 'chat_local_dao.g.dart';
     LocalMessages,
     LocalOutbox,
     LocalSyncState,
+    LocalUsers,
+    LocalConversationParticipants,
   ],
 )
 class ChatLocalDao extends DatabaseAccessor<AppDatabase>
@@ -22,6 +26,17 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   // ---------------------------------------------------------------------------
   // Conversations
   // ---------------------------------------------------------------------------
+
+  Future<void> removeConversationFromList(int conversationId) async {
+    await transaction(() async {
+      await (delete(localConversations)..where((t) => t.id.equals(conversationId)))
+          .go();
+
+      await (delete(localConversationParticipants)
+        ..where((t) => t.conversationId.equals(conversationId)))
+          .go();
+    });
+  }
 
   Stream<List<LocalConversation>> watchConversations() {
     return (select(localConversations)
@@ -650,4 +665,145 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Users / Participants
+  // ---------------------------------------------------------------------------
+
+  Stream<List<LocalConversationParticipantWithUser>>
+  watchConversationParticipantsWithUsers(int conversationId) {
+    final query = select(localConversationParticipants).join([
+      innerJoin(
+        localUsers,
+        localUsers.id.equalsExp(localConversationParticipants.userId),
+      ),
+    ])
+      ..where(
+        localConversationParticipants.conversationId.equals(conversationId) &
+        localConversationParticipants.leftAt.isNull(),
+      )
+      ..orderBy([
+        OrderingTerm(
+          expression: localConversationParticipants.role,
+          mode: OrderingMode.desc,
+        ),
+        OrderingTerm(
+          expression: localUsers.name,
+          mode: OrderingMode.asc,
+        ),
+      ]);
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return LocalConversationParticipantWithUser(
+          participant: row.readTable(localConversationParticipants),
+          user: row.readTable(localUsers),
+        );
+      }).toList(growable: false);
+    });
+  }
+
+  Future<LocalUser?> findLocalUserById(int userId) {
+    return (select(localUsers)..where((t) => t.id.equals(userId)))
+        .getSingleOrNull();
+  }
+
+  Future<LocalConversationParticipant?> findParticipant({
+    required int conversationId,
+    required int userId,
+  }) {
+    return (select(localConversationParticipants)
+      ..where(
+            (t) => t.conversationId.equals(conversationId) &
+        t.userId.equals(userId),
+      ))
+        .getSingleOrNull();
+  }
+
+  Future<void> upsertUser(LocalUsersCompanion user) {
+    return into(localUsers).insertOnConflictUpdate(user);
+  }
+
+  Future<void> upsertParticipant(
+      LocalConversationParticipantsCompanion participant,
+      ) {
+    return into(localConversationParticipants).insertOnConflictUpdate(
+      participant,
+    );
+  }
+
+  Future<void> upsertConversationDetails({
+    required LocalConversationsCompanion conversation,
+    required List<LocalUsersCompanion> users,
+    required List<LocalConversationParticipantsCompanion> participants,
+  }) async {
+    await transaction(() async {
+      await into(localConversations).insertOnConflictUpdate(conversation);
+
+      if (users.isNotEmpty) {
+        await batch((batch) {
+          batch.insertAllOnConflictUpdate(
+            localUsers,
+            users,
+          );
+        });
+      }
+
+      if (participants.isNotEmpty) {
+        await batch((batch) {
+          batch.insertAllOnConflictUpdate(
+            localConversationParticipants,
+            participants,
+          );
+        });
+      }
+    });
+  }
+
+  Future<void> markParticipantRemoved({
+    required int conversationId,
+    required int userId,
+    required DateTime leftAt,
+  }) {
+    return (update(localConversationParticipants)
+      ..where(
+            (t) => t.conversationId.equals(conversationId) &
+        t.userId.equals(userId),
+      ))
+        .write(
+      LocalConversationParticipantsCompanion(
+        leftAt: Value(leftAt),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> updateParticipantRole({
+    required int conversationId,
+    required int userId,
+    required String role,
+  }) {
+    return (update(localConversationParticipants)
+      ..where(
+            (t) => t.conversationId.equals(conversationId) &
+        t.userId.equals(userId),
+      ))
+        .write(
+      LocalConversationParticipantsCompanion(
+        role: Value(role),
+        leftAt: const Value(null),
+        locallyUpdatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+}
+
+class LocalConversationParticipantWithUser {
+  final LocalConversationParticipant participant;
+  final LocalUser user;
+
+  const LocalConversationParticipantWithUser({
+    required this.participant,
+    required this.user,
+  });
 }

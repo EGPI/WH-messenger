@@ -11,6 +11,9 @@ import '../../../messages/presentation/providers/outbox_retry_worker.dart';
 import '../../data/sync_api.dart';
 import '../../data/sync_mappers.dart';
 import '../../data/sync_models.dart';
+import '../../../conversations/data/conversation_api.dart';
+import '../../../conversations/data/conversation_details_models.dart';
+import '../../../conversations/data/conversation_mappers.dart';
 import 'chat_sync_state.dart';
 
 final chatSyncControllerProvider =
@@ -22,11 +25,13 @@ class ChatSyncController extends Notifier<ChatSyncState> {
   late final SyncApi _syncApi;
   late final MessageApi _messageApi;
   late final ChatLocalDao _dao;
+  late final ConversationApi _conversationApi;
 
   @override
   ChatSyncState build() {
     _syncApi = ref.read(syncApiProvider);
     _messageApi = ref.read(messageApiProvider);
+    _conversationApi = ref.read(conversationApiProvider);
     _dao = ref.read(chatLocalDaoProvider);
 
     return const ChatSyncState.initial();
@@ -128,13 +133,21 @@ class ChatSyncController extends Notifier<ChatSyncState> {
         return;
 
       case 'participant.added':
+        await _applyParticipantAdded(
+          event: event,
+          currentUserId: currentUserId,
+        );
+        return;
+
       case 'participant.removed':
+        await _applyParticipantRemoved(
+          event: event,
+          currentUserId: currentUserId,
+        );
+        return;
+
       case 'participant.role_changed':
-      // For now, safest lightweight behavior:
-      // refresh conversation metadata only when membership/role changes.
-        await ref
-            .read(conversationsControllerProvider.notifier)
-            .syncConversations();
+        await _applyParticipantRoleChanged(event);
         return;
 
       default:
@@ -224,6 +237,168 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     await _messageApi.markMessageDelivered(
       messageId: messageId,
+    );
+  }
+
+  Future<void> _applyParticipantAdded({
+    required SyncEventModel event,
+    required int currentUserId,
+  }) async {
+    final payload = event.payload;
+
+    final conversationId =
+        _parseInt(payload['conversation_id']) ?? event.conversationId;
+
+    final userId = _parseInt(payload['user_id']);
+
+    if (conversationId == null || userId == null) return;
+
+    // Important:
+    // If I am the newly added user, I may not have this conversation locally yet.
+    // Fetch full details first so the chat appears correctly.
+    if (userId == currentUserId) {
+      await _fetchAndSaveConversationDetails(conversationId);
+      await ref
+          .read(conversationsControllerProvider.notifier)
+          .syncConversations();
+      return;
+    }
+
+    final participant = ConversationParticipantModel(
+      conversationId: conversationId,
+      userId: userId,
+      name: payload['user_name']?.toString() ?? '',
+      email: payload['user_email']?.toString() ?? '',
+      avatarUrl: payload['user_avatar_url']?.toString(),
+      phone: null,
+      isActive: true,
+      lastSeenAt: null,
+      role: payload['role']?.toString() ?? 'member',
+      joinedAt: _parseDateTime(payload['joined_at']) ??
+          event.occurredAt ??
+          event.createdAt,
+      leftAt: null,
+    );
+
+    await _saveParticipant(participant);
+  }
+
+  Future<void> _applyParticipantRemoved({
+    required SyncEventModel event,
+    required int currentUserId,
+  }) async {
+    final payload = event.payload;
+
+    final conversationId =
+        _parseInt(payload['conversation_id']) ?? event.conversationId;
+
+    final userId = _parseInt(payload['user_id']);
+
+    if (conversationId == null || userId == null) return;
+
+    final leftAt = _parseDateTime(payload['left_at']) ??
+        event.occurredAt ??
+        event.createdAt ??
+        DateTime.now();
+
+    await _dao.markParticipantRemoved(
+      conversationId: conversationId,
+      userId: userId,
+      leftAt: leftAt,
+    );
+
+    // If I was removed, hide the conversation from the list locally.
+    // We do not delete messages here.
+    if (userId == currentUserId) {
+      final openConversationId = ref.read(openConversationIdProvider);
+
+      if (openConversationId == conversationId) {
+        ref.read(openConversationIdProvider.notifier).state = null;
+      }
+
+      await _dao.removeConversationFromList(conversationId);
+      await ref
+          .read(conversationsControllerProvider.notifier)
+          .syncConversations();
+      return;
+    }
+
+    await ref
+        .read(conversationsControllerProvider.notifier)
+        .syncConversations();
+  }
+
+  Future<void> _applyParticipantRoleChanged(SyncEventModel event) async {
+    final payload = event.payload;
+
+    final conversationId =
+        _parseInt(payload['conversation_id']) ?? event.conversationId;
+
+    final userId = _parseInt(payload['user_id']);
+    final role = payload['role']?.toString();
+
+    if (conversationId == null || userId == null || role == null) return;
+
+    final existingUser = await _dao.findLocalUserById(userId);
+
+    final participant = ConversationParticipantModel(
+      conversationId: conversationId,
+      userId: userId,
+      name: payload['user_name']?.toString() ?? existingUser?.name ?? '',
+      email: existingUser?.email ?? '',
+      avatarUrl: existingUser?.avatarUrl,
+      phone: existingUser?.phone,
+      isActive: existingUser?.isActive ?? true,
+      lastSeenAt: existingUser?.lastSeenAt,
+      role: role,
+      joinedAt: null,
+      leftAt: null,
+    );
+
+    await _saveParticipant(participant);
+
+    await _dao.updateParticipantRole(
+      conversationId: conversationId,
+      userId: userId,
+      role: role,
+    );
+
+    await ref
+        .read(conversationsControllerProvider.notifier)
+        .syncConversations();
+  }
+
+  Future<void> _fetchAndSaveConversationDetails(int conversationId) async {
+    final details = await _conversationApi.fetchConversationDetails(
+      conversationId: conversationId,
+    );
+
+    await _dao.upsertConversationDetails(
+      conversation: details.toLocalConversationCompanion(),
+      users: details.participants
+          .map((participant) => participant.toLocalUserCompanion())
+          .toList(growable: false),
+      participants: details.participants
+          .map(
+            (participant) => participant.toLocalParticipantCompanion(
+          fallbackConversationId: details.id,
+        ),
+      )
+          .toList(growable: false),
+    );
+  }
+
+  Future<void> _saveParticipant(
+      ConversationParticipantModel participant,
+      ) async {
+    await _dao.upsertUser(
+      participant.toLocalUserCompanion(),
+    );
+
+    await _dao.upsertParticipant(
+      participant.toLocalParticipantCompanion(
+        fallbackConversationId: participant.conversationId,
+      ),
     );
   }
 

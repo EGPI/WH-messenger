@@ -2414,6 +2414,953 @@ class LocalSyncStateCompanion extends UpdateCompanion<LocalSyncStateData> {
   }
 }
 
+class $LocalUsersTable extends LocalUsers
+    with TableInfo<$LocalUsersTable, LocalUser> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalUsersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+    'email',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _avatarUrlMeta = const VerificationMeta(
+    'avatarUrl',
+  );
+  @override
+  late final GeneratedColumn<String> avatarUrl = GeneratedColumn<String>(
+    'avatar_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _lastSeenAtMeta = const VerificationMeta(
+    'lastSeenAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSeenAt = GeneratedColumn<DateTime>(
+    'last_seen_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locallyUpdatedAtMeta = const VerificationMeta(
+    'locallyUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> locallyUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'locally_updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+        defaultValue: currentDateAndTime,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    email,
+    avatarUrl,
+    phone,
+    isActive,
+    lastSeenAt,
+    locallyUpdatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_users';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalUser> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('email')) {
+      context.handle(
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_emailMeta);
+    }
+    if (data.containsKey('avatar_url')) {
+      context.handle(
+        _avatarUrlMeta,
+        avatarUrl.isAcceptableOrUnknown(data['avatar_url']!, _avatarUrlMeta),
+      );
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('last_seen_at')) {
+      context.handle(
+        _lastSeenAtMeta,
+        lastSeenAt.isAcceptableOrUnknown(
+          data['last_seen_at']!,
+          _lastSeenAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('locally_updated_at')) {
+      context.handle(
+        _locallyUpdatedAtMeta,
+        locallyUpdatedAt.isAcceptableOrUnknown(
+          data['locally_updated_at']!,
+          _locallyUpdatedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalUser map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalUser(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      )!,
+      avatarUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_url'],
+      ),
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      lastSeenAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_seen_at'],
+      ),
+      locallyUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}locally_updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalUsersTable createAlias(String alias) {
+    return $LocalUsersTable(attachedDatabase, alias);
+  }
+}
+
+class LocalUser extends DataClass implements Insertable<LocalUser> {
+  /// Server user ID from Laravel.
+  final int id;
+  final String name;
+  final String email;
+  final String? avatarUrl;
+  final String? phone;
+  final bool isActive;
+  final DateTime? lastSeenAt;
+  final DateTime locallyUpdatedAt;
+  const LocalUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.avatarUrl,
+    this.phone,
+    required this.isActive,
+    this.lastSeenAt,
+    required this.locallyUpdatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['email'] = Variable<String>(email);
+    if (!nullToAbsent || avatarUrl != null) {
+      map['avatar_url'] = Variable<String>(avatarUrl);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    if (!nullToAbsent || lastSeenAt != null) {
+      map['last_seen_at'] = Variable<DateTime>(lastSeenAt);
+    }
+    map['locally_updated_at'] = Variable<DateTime>(locallyUpdatedAt);
+    return map;
+  }
+
+  LocalUsersCompanion toCompanion(bool nullToAbsent) {
+    return LocalUsersCompanion(
+      id: Value(id),
+      name: Value(name),
+      email: Value(email),
+      avatarUrl: avatarUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avatarUrl),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      isActive: Value(isActive),
+      lastSeenAt: lastSeenAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSeenAt),
+      locallyUpdatedAt: Value(locallyUpdatedAt),
+    );
+  }
+
+  factory LocalUser.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalUser(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      email: serializer.fromJson<String>(json['email']),
+      avatarUrl: serializer.fromJson<String?>(json['avatarUrl']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      lastSeenAt: serializer.fromJson<DateTime?>(json['lastSeenAt']),
+      locallyUpdatedAt: serializer.fromJson<DateTime>(json['locallyUpdatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'email': serializer.toJson<String>(email),
+      'avatarUrl': serializer.toJson<String?>(avatarUrl),
+      'phone': serializer.toJson<String?>(phone),
+      'isActive': serializer.toJson<bool>(isActive),
+      'lastSeenAt': serializer.toJson<DateTime?>(lastSeenAt),
+      'locallyUpdatedAt': serializer.toJson<DateTime>(locallyUpdatedAt),
+    };
+  }
+
+  LocalUser copyWith({
+    int? id,
+    String? name,
+    String? email,
+    Value<String?> avatarUrl = const Value.absent(),
+    Value<String?> phone = const Value.absent(),
+    bool? isActive,
+    Value<DateTime?> lastSeenAt = const Value.absent(),
+    DateTime? locallyUpdatedAt,
+  }) => LocalUser(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    email: email ?? this.email,
+    avatarUrl: avatarUrl.present ? avatarUrl.value : this.avatarUrl,
+    phone: phone.present ? phone.value : this.phone,
+    isActive: isActive ?? this.isActive,
+    lastSeenAt: lastSeenAt.present ? lastSeenAt.value : this.lastSeenAt,
+    locallyUpdatedAt: locallyUpdatedAt ?? this.locallyUpdatedAt,
+  );
+  LocalUser copyWithCompanion(LocalUsersCompanion data) {
+    return LocalUser(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      email: data.email.present ? data.email.value : this.email,
+      avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      lastSeenAt: data.lastSeenAt.present
+          ? data.lastSeenAt.value
+          : this.lastSeenAt,
+      locallyUpdatedAt: data.locallyUpdatedAt.present
+          ? data.locallyUpdatedAt.value
+          : this.locallyUpdatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalUser(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('email: $email, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('phone: $phone, ')
+          ..write('isActive: $isActive, ')
+          ..write('lastSeenAt: $lastSeenAt, ')
+          ..write('locallyUpdatedAt: $locallyUpdatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    email,
+    avatarUrl,
+    phone,
+    isActive,
+    lastSeenAt,
+    locallyUpdatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalUser &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.email == this.email &&
+          other.avatarUrl == this.avatarUrl &&
+          other.phone == this.phone &&
+          other.isActive == this.isActive &&
+          other.lastSeenAt == this.lastSeenAt &&
+          other.locallyUpdatedAt == this.locallyUpdatedAt);
+}
+
+class LocalUsersCompanion extends UpdateCompanion<LocalUser> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String> email;
+  final Value<String?> avatarUrl;
+  final Value<String?> phone;
+  final Value<bool> isActive;
+  final Value<DateTime?> lastSeenAt;
+  final Value<DateTime> locallyUpdatedAt;
+  const LocalUsersCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.email = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.lastSeenAt = const Value.absent(),
+    this.locallyUpdatedAt = const Value.absent(),
+  });
+  LocalUsersCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required String email,
+    this.avatarUrl = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.lastSeenAt = const Value.absent(),
+    this.locallyUpdatedAt = const Value.absent(),
+  }) : name = Value(name),
+       email = Value(email);
+  static Insertable<LocalUser> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? email,
+    Expression<String>? avatarUrl,
+    Expression<String>? phone,
+    Expression<bool>? isActive,
+    Expression<DateTime>? lastSeenAt,
+    Expression<DateTime>? locallyUpdatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (email != null) 'email': email,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (phone != null) 'phone': phone,
+      if (isActive != null) 'is_active': isActive,
+      if (lastSeenAt != null) 'last_seen_at': lastSeenAt,
+      if (locallyUpdatedAt != null) 'locally_updated_at': locallyUpdatedAt,
+    });
+  }
+
+  LocalUsersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String>? email,
+    Value<String?>? avatarUrl,
+    Value<String?>? phone,
+    Value<bool>? isActive,
+    Value<DateTime?>? lastSeenAt,
+    Value<DateTime>? locallyUpdatedAt,
+  }) {
+    return LocalUsersCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      phone: phone ?? this.phone,
+      isActive: isActive ?? this.isActive,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      locallyUpdatedAt: locallyUpdatedAt ?? this.locallyUpdatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (avatarUrl.present) {
+      map['avatar_url'] = Variable<String>(avatarUrl.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (lastSeenAt.present) {
+      map['last_seen_at'] = Variable<DateTime>(lastSeenAt.value);
+    }
+    if (locallyUpdatedAt.present) {
+      map['locally_updated_at'] = Variable<DateTime>(locallyUpdatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalUsersCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('email: $email, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('phone: $phone, ')
+          ..write('isActive: $isActive, ')
+          ..write('lastSeenAt: $lastSeenAt, ')
+          ..write('locallyUpdatedAt: $locallyUpdatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalConversationParticipantsTable extends LocalConversationParticipants
+    with
+        TableInfo<
+          $LocalConversationParticipantsTable,
+          LocalConversationParticipant
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalConversationParticipantsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _conversationIdMeta = const VerificationMeta(
+    'conversationId',
+  );
+  @override
+  late final GeneratedColumn<int> conversationId = GeneratedColumn<int>(
+    'conversation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _joinedAtMeta = const VerificationMeta(
+    'joinedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> joinedAt = GeneratedColumn<DateTime>(
+    'joined_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _leftAtMeta = const VerificationMeta('leftAt');
+  @override
+  late final GeneratedColumn<DateTime> leftAt = GeneratedColumn<DateTime>(
+    'left_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locallyUpdatedAtMeta = const VerificationMeta(
+    'locallyUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> locallyUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'locally_updated_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+        defaultValue: currentDateAndTime,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    conversationId,
+    userId,
+    role,
+    joinedAt,
+    leftAt,
+    locallyUpdatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_conversation_participants';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalConversationParticipant> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('conversation_id')) {
+      context.handle(
+        _conversationIdMeta,
+        conversationId.isAcceptableOrUnknown(
+          data['conversation_id']!,
+          _conversationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    }
+    if (data.containsKey('joined_at')) {
+      context.handle(
+        _joinedAtMeta,
+        joinedAt.isAcceptableOrUnknown(data['joined_at']!, _joinedAtMeta),
+      );
+    }
+    if (data.containsKey('left_at')) {
+      context.handle(
+        _leftAtMeta,
+        leftAt.isAcceptableOrUnknown(data['left_at']!, _leftAtMeta),
+      );
+    }
+    if (data.containsKey('locally_updated_at')) {
+      context.handle(
+        _locallyUpdatedAtMeta,
+        locallyUpdatedAt.isAcceptableOrUnknown(
+          data['locally_updated_at']!,
+          _locallyUpdatedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {conversationId, userId};
+  @override
+  LocalConversationParticipant map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalConversationParticipant(
+      conversationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}conversation_id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_id'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      ),
+      joinedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}joined_at'],
+      ),
+      leftAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}left_at'],
+      ),
+      locallyUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}locally_updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalConversationParticipantsTable createAlias(String alias) {
+    return $LocalConversationParticipantsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalConversationParticipant extends DataClass
+    implements Insertable<LocalConversationParticipant> {
+  final int conversationId;
+  final int userId;
+
+  /// owner, admin, member
+  final String? role;
+  final DateTime? joinedAt;
+
+  /// Null means active participant.
+  /// Non-null means removed/left.
+  final DateTime? leftAt;
+  final DateTime locallyUpdatedAt;
+  const LocalConversationParticipant({
+    required this.conversationId,
+    required this.userId,
+    this.role,
+    this.joinedAt,
+    this.leftAt,
+    required this.locallyUpdatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['conversation_id'] = Variable<int>(conversationId);
+    map['user_id'] = Variable<int>(userId);
+    if (!nullToAbsent || role != null) {
+      map['role'] = Variable<String>(role);
+    }
+    if (!nullToAbsent || joinedAt != null) {
+      map['joined_at'] = Variable<DateTime>(joinedAt);
+    }
+    if (!nullToAbsent || leftAt != null) {
+      map['left_at'] = Variable<DateTime>(leftAt);
+    }
+    map['locally_updated_at'] = Variable<DateTime>(locallyUpdatedAt);
+    return map;
+  }
+
+  LocalConversationParticipantsCompanion toCompanion(bool nullToAbsent) {
+    return LocalConversationParticipantsCompanion(
+      conversationId: Value(conversationId),
+      userId: Value(userId),
+      role: role == null && nullToAbsent ? const Value.absent() : Value(role),
+      joinedAt: joinedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(joinedAt),
+      leftAt: leftAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(leftAt),
+      locallyUpdatedAt: Value(locallyUpdatedAt),
+    );
+  }
+
+  factory LocalConversationParticipant.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalConversationParticipant(
+      conversationId: serializer.fromJson<int>(json['conversationId']),
+      userId: serializer.fromJson<int>(json['userId']),
+      role: serializer.fromJson<String?>(json['role']),
+      joinedAt: serializer.fromJson<DateTime?>(json['joinedAt']),
+      leftAt: serializer.fromJson<DateTime?>(json['leftAt']),
+      locallyUpdatedAt: serializer.fromJson<DateTime>(json['locallyUpdatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'conversationId': serializer.toJson<int>(conversationId),
+      'userId': serializer.toJson<int>(userId),
+      'role': serializer.toJson<String?>(role),
+      'joinedAt': serializer.toJson<DateTime?>(joinedAt),
+      'leftAt': serializer.toJson<DateTime?>(leftAt),
+      'locallyUpdatedAt': serializer.toJson<DateTime>(locallyUpdatedAt),
+    };
+  }
+
+  LocalConversationParticipant copyWith({
+    int? conversationId,
+    int? userId,
+    Value<String?> role = const Value.absent(),
+    Value<DateTime?> joinedAt = const Value.absent(),
+    Value<DateTime?> leftAt = const Value.absent(),
+    DateTime? locallyUpdatedAt,
+  }) => LocalConversationParticipant(
+    conversationId: conversationId ?? this.conversationId,
+    userId: userId ?? this.userId,
+    role: role.present ? role.value : this.role,
+    joinedAt: joinedAt.present ? joinedAt.value : this.joinedAt,
+    leftAt: leftAt.present ? leftAt.value : this.leftAt,
+    locallyUpdatedAt: locallyUpdatedAt ?? this.locallyUpdatedAt,
+  );
+  LocalConversationParticipant copyWithCompanion(
+    LocalConversationParticipantsCompanion data,
+  ) {
+    return LocalConversationParticipant(
+      conversationId: data.conversationId.present
+          ? data.conversationId.value
+          : this.conversationId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      role: data.role.present ? data.role.value : this.role,
+      joinedAt: data.joinedAt.present ? data.joinedAt.value : this.joinedAt,
+      leftAt: data.leftAt.present ? data.leftAt.value : this.leftAt,
+      locallyUpdatedAt: data.locallyUpdatedAt.present
+          ? data.locallyUpdatedAt.value
+          : this.locallyUpdatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalConversationParticipant(')
+          ..write('conversationId: $conversationId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('joinedAt: $joinedAt, ')
+          ..write('leftAt: $leftAt, ')
+          ..write('locallyUpdatedAt: $locallyUpdatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    conversationId,
+    userId,
+    role,
+    joinedAt,
+    leftAt,
+    locallyUpdatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalConversationParticipant &&
+          other.conversationId == this.conversationId &&
+          other.userId == this.userId &&
+          other.role == this.role &&
+          other.joinedAt == this.joinedAt &&
+          other.leftAt == this.leftAt &&
+          other.locallyUpdatedAt == this.locallyUpdatedAt);
+}
+
+class LocalConversationParticipantsCompanion
+    extends UpdateCompanion<LocalConversationParticipant> {
+  final Value<int> conversationId;
+  final Value<int> userId;
+  final Value<String?> role;
+  final Value<DateTime?> joinedAt;
+  final Value<DateTime?> leftAt;
+  final Value<DateTime> locallyUpdatedAt;
+  final Value<int> rowid;
+  const LocalConversationParticipantsCompanion({
+    this.conversationId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.role = const Value.absent(),
+    this.joinedAt = const Value.absent(),
+    this.leftAt = const Value.absent(),
+    this.locallyUpdatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalConversationParticipantsCompanion.insert({
+    required int conversationId,
+    required int userId,
+    this.role = const Value.absent(),
+    this.joinedAt = const Value.absent(),
+    this.leftAt = const Value.absent(),
+    this.locallyUpdatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : conversationId = Value(conversationId),
+       userId = Value(userId);
+  static Insertable<LocalConversationParticipant> custom({
+    Expression<int>? conversationId,
+    Expression<int>? userId,
+    Expression<String>? role,
+    Expression<DateTime>? joinedAt,
+    Expression<DateTime>? leftAt,
+    Expression<DateTime>? locallyUpdatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (conversationId != null) 'conversation_id': conversationId,
+      if (userId != null) 'user_id': userId,
+      if (role != null) 'role': role,
+      if (joinedAt != null) 'joined_at': joinedAt,
+      if (leftAt != null) 'left_at': leftAt,
+      if (locallyUpdatedAt != null) 'locally_updated_at': locallyUpdatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalConversationParticipantsCompanion copyWith({
+    Value<int>? conversationId,
+    Value<int>? userId,
+    Value<String?>? role,
+    Value<DateTime?>? joinedAt,
+    Value<DateTime?>? leftAt,
+    Value<DateTime>? locallyUpdatedAt,
+    Value<int>? rowid,
+  }) {
+    return LocalConversationParticipantsCompanion(
+      conversationId: conversationId ?? this.conversationId,
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      joinedAt: joinedAt ?? this.joinedAt,
+      leftAt: leftAt ?? this.leftAt,
+      locallyUpdatedAt: locallyUpdatedAt ?? this.locallyUpdatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (conversationId.present) {
+      map['conversation_id'] = Variable<int>(conversationId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<int>(userId.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (joinedAt.present) {
+      map['joined_at'] = Variable<DateTime>(joinedAt.value);
+    }
+    if (leftAt.present) {
+      map['left_at'] = Variable<DateTime>(leftAt.value);
+    }
+    if (locallyUpdatedAt.present) {
+      map['locally_updated_at'] = Variable<DateTime>(locallyUpdatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalConversationParticipantsCompanion(')
+          ..write('conversationId: $conversationId, ')
+          ..write('userId: $userId, ')
+          ..write('role: $role, ')
+          ..write('joinedAt: $joinedAt, ')
+          ..write('leftAt: $leftAt, ')
+          ..write('locallyUpdatedAt: $locallyUpdatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2422,6 +3369,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalMessagesTable localMessages = $LocalMessagesTable(this);
   late final $LocalOutboxTable localOutbox = $LocalOutboxTable(this);
   late final $LocalSyncStateTable localSyncState = $LocalSyncStateTable(this);
+  late final $LocalUsersTable localUsers = $LocalUsersTable(this);
+  late final $LocalConversationParticipantsTable localConversationParticipants =
+      $LocalConversationParticipantsTable(this);
   late final ChatLocalDao chatLocalDao = ChatLocalDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2432,6 +3382,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localMessages,
     localOutbox,
     localSyncState,
+    localUsers,
+    localConversationParticipants,
   ];
 }
 
@@ -3610,6 +4562,500 @@ typedef $$LocalSyncStateTableProcessedTableManager =
       LocalSyncStateData,
       PrefetchHooks Function()
     >;
+typedef $$LocalUsersTableCreateCompanionBuilder =
+    LocalUsersCompanion Function({
+      Value<int> id,
+      required String name,
+      required String email,
+      Value<String?> avatarUrl,
+      Value<String?> phone,
+      Value<bool> isActive,
+      Value<DateTime?> lastSeenAt,
+      Value<DateTime> locallyUpdatedAt,
+    });
+typedef $$LocalUsersTableUpdateCompanionBuilder =
+    LocalUsersCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String> email,
+      Value<String?> avatarUrl,
+      Value<String?> phone,
+      Value<bool> isActive,
+      Value<DateTime?> lastSeenAt,
+      Value<DateTime> locallyUpdatedAt,
+    });
+
+class $$LocalUsersTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalUsersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get email => $composableBuilder(
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get avatarUrl => $composableBuilder(
+    column: $table.avatarUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalUsersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalUsersTable> {
+  $$LocalUsersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get avatarUrl =>
+      $composableBuilder(column: $table.avatarUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSeenAt => $composableBuilder(
+    column: $table.lastSeenAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalUsersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalUsersTable,
+          LocalUser,
+          $$LocalUsersTableFilterComposer,
+          $$LocalUsersTableOrderingComposer,
+          $$LocalUsersTableAnnotationComposer,
+          $$LocalUsersTableCreateCompanionBuilder,
+          $$LocalUsersTableUpdateCompanionBuilder,
+          (
+            LocalUser,
+            BaseReferences<_$AppDatabase, $LocalUsersTable, LocalUser>,
+          ),
+          LocalUser,
+          PrefetchHooks Function()
+        > {
+  $$LocalUsersTableTableManager(_$AppDatabase db, $LocalUsersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalUsersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalUsersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalUsersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> email = const Value.absent(),
+                Value<String?> avatarUrl = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> lastSeenAt = const Value.absent(),
+                Value<DateTime> locallyUpdatedAt = const Value.absent(),
+              }) => LocalUsersCompanion(
+                id: id,
+                name: name,
+                email: email,
+                avatarUrl: avatarUrl,
+                phone: phone,
+                isActive: isActive,
+                lastSeenAt: lastSeenAt,
+                locallyUpdatedAt: locallyUpdatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required String email,
+                Value<String?> avatarUrl = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime?> lastSeenAt = const Value.absent(),
+                Value<DateTime> locallyUpdatedAt = const Value.absent(),
+              }) => LocalUsersCompanion.insert(
+                id: id,
+                name: name,
+                email: email,
+                avatarUrl: avatarUrl,
+                phone: phone,
+                isActive: isActive,
+                lastSeenAt: lastSeenAt,
+                locallyUpdatedAt: locallyUpdatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalUsersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalUsersTable,
+      LocalUser,
+      $$LocalUsersTableFilterComposer,
+      $$LocalUsersTableOrderingComposer,
+      $$LocalUsersTableAnnotationComposer,
+      $$LocalUsersTableCreateCompanionBuilder,
+      $$LocalUsersTableUpdateCompanionBuilder,
+      (LocalUser, BaseReferences<_$AppDatabase, $LocalUsersTable, LocalUser>),
+      LocalUser,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalConversationParticipantsTableCreateCompanionBuilder =
+    LocalConversationParticipantsCompanion Function({
+      required int conversationId,
+      required int userId,
+      Value<String?> role,
+      Value<DateTime?> joinedAt,
+      Value<DateTime?> leftAt,
+      Value<DateTime> locallyUpdatedAt,
+      Value<int> rowid,
+    });
+typedef $$LocalConversationParticipantsTableUpdateCompanionBuilder =
+    LocalConversationParticipantsCompanion Function({
+      Value<int> conversationId,
+      Value<int> userId,
+      Value<String?> role,
+      Value<DateTime?> joinedAt,
+      Value<DateTime?> leftAt,
+      Value<DateTime> locallyUpdatedAt,
+      Value<int> rowid,
+    });
+
+class $$LocalConversationParticipantsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalConversationParticipantsTable> {
+  $$LocalConversationParticipantsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get leftAt => $composableBuilder(
+    column: $table.leftAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalConversationParticipantsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalConversationParticipantsTable> {
+  $$LocalConversationParticipantsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get joinedAt => $composableBuilder(
+    column: $table.joinedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get leftAt => $composableBuilder(
+    column: $table.leftAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalConversationParticipantsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalConversationParticipantsTable> {
+  $$LocalConversationParticipantsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get conversationId => $composableBuilder(
+    column: $table.conversationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get joinedAt =>
+      $composableBuilder(column: $table.joinedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get leftAt =>
+      $composableBuilder(column: $table.leftAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get locallyUpdatedAt => $composableBuilder(
+    column: $table.locallyUpdatedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalConversationParticipantsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalConversationParticipantsTable,
+          LocalConversationParticipant,
+          $$LocalConversationParticipantsTableFilterComposer,
+          $$LocalConversationParticipantsTableOrderingComposer,
+          $$LocalConversationParticipantsTableAnnotationComposer,
+          $$LocalConversationParticipantsTableCreateCompanionBuilder,
+          $$LocalConversationParticipantsTableUpdateCompanionBuilder,
+          (
+            LocalConversationParticipant,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalConversationParticipantsTable,
+              LocalConversationParticipant
+            >,
+          ),
+          LocalConversationParticipant,
+          PrefetchHooks Function()
+        > {
+  $$LocalConversationParticipantsTableTableManager(
+    _$AppDatabase db,
+    $LocalConversationParticipantsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalConversationParticipantsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalConversationParticipantsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalConversationParticipantsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> conversationId = const Value.absent(),
+                Value<int> userId = const Value.absent(),
+                Value<String?> role = const Value.absent(),
+                Value<DateTime?> joinedAt = const Value.absent(),
+                Value<DateTime?> leftAt = const Value.absent(),
+                Value<DateTime> locallyUpdatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalConversationParticipantsCompanion(
+                conversationId: conversationId,
+                userId: userId,
+                role: role,
+                joinedAt: joinedAt,
+                leftAt: leftAt,
+                locallyUpdatedAt: locallyUpdatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int conversationId,
+                required int userId,
+                Value<String?> role = const Value.absent(),
+                Value<DateTime?> joinedAt = const Value.absent(),
+                Value<DateTime?> leftAt = const Value.absent(),
+                Value<DateTime> locallyUpdatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalConversationParticipantsCompanion.insert(
+                conversationId: conversationId,
+                userId: userId,
+                role: role,
+                joinedAt: joinedAt,
+                leftAt: leftAt,
+                locallyUpdatedAt: locallyUpdatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalConversationParticipantsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalConversationParticipantsTable,
+      LocalConversationParticipant,
+      $$LocalConversationParticipantsTableFilterComposer,
+      $$LocalConversationParticipantsTableOrderingComposer,
+      $$LocalConversationParticipantsTableAnnotationComposer,
+      $$LocalConversationParticipantsTableCreateCompanionBuilder,
+      $$LocalConversationParticipantsTableUpdateCompanionBuilder,
+      (
+        LocalConversationParticipant,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalConversationParticipantsTable,
+          LocalConversationParticipant
+        >,
+      ),
+      LocalConversationParticipant,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3622,4 +5068,12 @@ class $AppDatabaseManager {
       $$LocalOutboxTableTableManager(_db, _db.localOutbox);
   $$LocalSyncStateTableTableManager get localSyncState =>
       $$LocalSyncStateTableTableManager(_db, _db.localSyncState);
+  $$LocalUsersTableTableManager get localUsers =>
+      $$LocalUsersTableTableManager(_db, _db.localUsers);
+  $$LocalConversationParticipantsTableTableManager
+  get localConversationParticipants =>
+      $$LocalConversationParticipantsTableTableManager(
+        _db,
+        _db.localConversationParticipants,
+      );
 }

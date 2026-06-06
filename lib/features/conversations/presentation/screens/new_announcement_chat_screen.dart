@@ -99,6 +99,7 @@ class _NewAnnouncementChatScreenState
         _titleController.text.trim().isNotEmpty && !state.isCreating;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('New announcement'),

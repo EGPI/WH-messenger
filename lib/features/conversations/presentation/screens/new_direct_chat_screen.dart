@@ -82,6 +82,7 @@ class _NewDirectChatScreenState extends ConsumerState<NewDirectChatScreen> {
     );
 
     final state = ref.watch(newDirectChatControllerProvider);
+    final keyboardBottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     final currentUserId = ref.watch(
       authControllerProvider.select((state) => state.user?.id),
@@ -92,6 +93,7 @@ class _NewDirectChatScreenState extends ConsumerState<NewDirectChatScreen> {
         .toList(growable: false);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('New chat'),
@@ -149,6 +151,7 @@ class _NewDirectChatScreenState extends ConsumerState<NewDirectChatScreen> {
                     isSearching: state.isSearching,
                     isCreating: state.isCreating,
                     query: _searchController.text.trim(),
+                    keyboardBottomInset: keyboardBottomInset,
                     onUserTap: _openDirectChat,
                   ),
                 ),
@@ -429,7 +432,7 @@ class _SearchBox extends StatelessWidget {
         ),
         child: TextField(
           controller: controller,
-          autofocus: true,
+          autofocus: false,
           textInputAction: TextInputAction.search,
           style: const TextStyle(
             color: Color(0xFF102033),
@@ -474,6 +477,7 @@ class _UsersList extends StatelessWidget {
   final bool isSearching;
   final bool isCreating;
   final String query;
+  final double keyboardBottomInset;
   final ValueChanged<UserSearchResultModel> onUserTap;
 
   const _UsersList({
@@ -481,6 +485,7 @@ class _UsersList extends StatelessWidget {
     required this.isSearching,
     required this.isCreating,
     required this.query,
+    required this.keyboardBottomInset,
     required this.onUserTap,
   });
 
@@ -504,7 +509,12 @@ class _UsersList extends StatelessWidget {
 
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        2,
+        16,
+        24 + keyboardBottomInset,
+      ),
       itemCount: users.length,
       itemBuilder: (context, index) {
         final user = users[index];
