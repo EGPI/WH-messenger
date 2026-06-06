@@ -3,7 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../conversations/presentation/providers/conversation_details_controller.dart';
+import '../../../../core/database/app_database_provider.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../realtime/presentation/providers/realtime_bootstrap_provider.dart';
 import '../providers/message_screen_controller.dart';
@@ -34,6 +35,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
   bool _didInitialOpen = false;
   int _lastMessageCount = 0;
   bool _clearedOpenConversation = false;
+  bool _didWarmUpSenderNames = false;
 
   @override
   void initState() {
@@ -93,6 +95,39 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     ref
         .read(messageScreenControllerProvider(widget.conversationId).notifier)
         .openConversation();
+  }
+  void _warmUpSenderNamesForGroupLike(String? type) {
+    if (_didWarmUpSenderNames) return;
+
+    final normalizedType = type?.trim().toLowerCase();
+
+    final shouldLoadDetails =
+        normalizedType == 'group' || normalizedType == 'announcement';
+
+    if (!shouldLoadDetails) return;
+
+    _didWarmUpSenderNames = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      final dao = ref.read(chatLocalDaoProvider);
+
+      final participantCount = await dao.getActiveParticipantCount(
+        widget.conversationId,
+      );
+
+      if (!mounted) return;
+
+      // If participants are already cached, do not hit /details again.
+      if (participantCount > 0) return;
+
+      await ref
+          .read(
+        conversationDetailsControllerProvider(widget.conversationId).notifier,
+      )
+          .loadDetails(refresh: true);
+    });
   }
 
   void _onScroll() {
@@ -189,6 +224,8 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
           title: conversationAsync.when(
             data: (conversation) {
               final type = conversation?.type;
+
+              _warmUpSenderNamesForGroupLike(type);
 
               return _MessageAppBarTitle(
                 title: _conversationTitle(
@@ -391,6 +428,22 @@ class _MessagesList extends ConsumerWidget {
     final currentUserId = ref.watch(
       authControllerProvider.select((state) => state.user?.id),
     );
+    final conversationType = ref.watch(
+      localConversationProvider(conversationId),
+    ).maybeWhen(
+      data: (conversation) => conversation?.type,
+      orElse: () => null,
+    );
+
+    final shouldShowSenderNames =
+        conversationType == 'group' || conversationType == 'announcement';
+
+    final senderNames = ref.watch(
+      messageSenderNamesProvider(conversationId),
+    ).maybeWhen(
+      data: (names) => names,
+      orElse: () => const <int, String>{},
+    );
     final canSendMessages = ref.watch(
       messageSendPermissionProvider(conversationId).select(
             (permission) => permission.canSend,
@@ -435,7 +488,8 @@ class _MessagesList extends ConsumerWidget {
               ),
               message: message,
               isMine: isMine,
-              showSenderName: false,
+              showSenderName: shouldShowSenderNames && !isMine,
+              senderName: senderNames[message.senderId],
               onRetry: !canSendMessages || message.clientMessageId == null
                   ? null
                   : () {

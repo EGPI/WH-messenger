@@ -670,6 +670,51 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   // Users / Participants
   // ---------------------------------------------------------------------------
 
+  Future<int> getActiveParticipantCount(int conversationId) async {
+    final countExpression = localConversationParticipants.userId.count();
+
+    final query = selectOnly(localConversationParticipants)
+      ..addColumns([countExpression])
+      ..where(
+        localConversationParticipants.conversationId.equals(conversationId) &
+        localConversationParticipants.leftAt.isNull(),
+      );
+
+    final row = await query.getSingleOrNull();
+
+    return row?.read(countExpression) ?? 0;
+  }
+
+  Stream<List<LocalConversationParticipantWithUser>>
+  watchConversationParticipantsWithUsersIncludingRemoved(
+      int conversationId,
+      ) {
+    final query = select(localConversationParticipants).join([
+      innerJoin(
+        localUsers,
+        localUsers.id.equalsExp(localConversationParticipants.userId),
+      ),
+    ])
+      ..where(
+        localConversationParticipants.conversationId.equals(conversationId),
+      )
+      ..orderBy([
+        OrderingTerm(
+          expression: localUsers.name,
+          mode: OrderingMode.asc,
+        ),
+      ]);
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return LocalConversationParticipantWithUser(
+          participant: row.readTable(localConversationParticipants),
+          user: row.readTable(localUsers),
+        );
+      }).toList(growable: false);
+    });
+  }
+
   Stream<List<LocalConversationParticipantWithUser>>
   watchConversationParticipantsWithUsers(int conversationId) {
     final query = select(localConversationParticipants).join([

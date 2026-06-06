@@ -98,3 +98,24 @@ Provider.family<MessageSendPermission, int>((ref, conversationId) {
     orElse: () => const MessageSendPermission.canSend(),
   );
 });
+
+final messageSenderNamesProvider =
+StreamProvider.family<Map<int, String>, int>((ref, conversationId) {
+  final dao = ref.watch(chatLocalDaoProvider);
+
+  return dao
+      .watchConversationParticipantsWithUsersIncludingRemoved(conversationId)
+      .map((participants) {
+    final result = <int, String>{};
+
+    for (final item in participants) {
+      final name = item.user.name.trim();
+
+      if (name.isEmpty) continue;
+
+      result[item.user.id] = name;
+    }
+
+    return result;
+  });
+});

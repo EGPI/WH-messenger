@@ -7,6 +7,7 @@ class MessageBubble extends StatelessWidget {
   final LocalMessage message;
   final bool isMine;
   final bool showSenderName;
+  final String? senderName;
   final VoidCallback? onRetry;
 
   const MessageBubble({
@@ -14,6 +15,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMine,
     required this.showSenderName,
+    this.senderName,
     this.onRetry,
   });
 
@@ -84,7 +86,7 @@ class MessageBubble extends StatelessWidget {
                 children: [
                   if (showSenderName && !isMine) ...[
                     Text(
-                      'User ${message.senderId}',
+                      _safeSenderName(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -117,6 +119,17 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+
+  String _safeSenderName() {
+    final trimmed = senderName?.trim();
+
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+
+    return 'User ${message.senderId}';
+  }
+
 }
 
 class _SystemMessageRow extends StatelessWidget {
