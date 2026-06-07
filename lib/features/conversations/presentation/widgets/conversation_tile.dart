@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
 
-//This tile is split into small private widgets, so only the list item that changes needs to rebuild from the stream.
+// This tile is split into small private widgets, so only the list item that changes needs to rebuild from the stream.
 
 class ConversationTile extends StatelessWidget {
   final LocalConversation conversation;
@@ -21,34 +21,61 @@ class ConversationTile extends StatelessWidget {
     final timeLabel = _formatTime(conversation.lastMessageAt);
     final initials = _initials(title);
     final unreadCount = conversation.unreadCount;
+    final hasUnread = unreadCount > 0;
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
-        ),
-        child: Row(
-          children: [
-            _ConversationAvatar(
-              initials: initials,
-              type: conversation.type,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: hasUnread
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: hasUnread
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.16)
+                  : Colors.white.withValues(alpha: 0.92),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ConversationTextContent(
-                title: title,
-                preview: preview,
-                hasUnread: unreadCount > 0,
+            boxShadow: [
+              BoxShadow(
+                color: hasUnread
+                    ? Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.10)
+                    : Colors.black.withValues(alpha: 0.045),
+                blurRadius: hasUnread ? 24 : 18,
+                offset: const Offset(0, 10),
               ),
-            ),
-            const SizedBox(width: 12),
-            _ConversationTrailing(
-              timeLabel: timeLabel,
-              unreadCount: unreadCount,
-            ),
-          ],
+            ],
+          ),
+          child: Row(
+            children: [
+              _ConversationAvatar(
+                initials: initials,
+                type: conversation.type,
+                hasUnread: hasUnread,
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: _ConversationTextContent(
+                  title: title,
+                  preview: preview,
+                  hasUnread: hasUnread,
+                  type: conversation.type,
+                ),
+              ),
+              const SizedBox(width: 12),
+              _ConversationTrailing(
+                timeLabel: timeLabel,
+                unreadCount: unreadCount,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,10 +158,12 @@ class ConversationTile extends StatelessWidget {
 class _ConversationAvatar extends StatelessWidget {
   final String initials;
   final String type;
+  final bool hasUnread;
 
   const _ConversationAvatar({
     required this.initials,
     required this.type,
+    required this.hasUnread,
   });
 
   @override
@@ -149,21 +178,65 @@ class _ConversationAvatar extends StatelessWidget {
       icon = Icons.campaign_rounded;
     }
 
-    return CircleAvatar(
-      radius: 25,
-      backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
-      child: icon == null
-          ? Text(
-        initials,
-        style: TextStyle(
-          color: colorScheme.primary,
-          fontWeight: FontWeight.w800,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colorScheme.primary,
+                const Color(0xFF42A5F5),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 9),
+              ),
+            ],
+          ),
+          child: icon == null
+              ? Center(
+            child: Text(
+              initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          )
+              : Icon(
+            icon,
+            color: Colors.white,
+            size: 27,
+          ),
         ),
-      )
-          : Icon(
-        icon,
-        color: colorScheme.primary,
-      ),
+        if (hasUnread)
+          Positioned(
+            top: -1,
+            right: -1,
+            child: Container(
+              width: 13,
+              height: 13,
+              decoration: BoxDecoration(
+                color: const Color(0xFF21C064),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2.2,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -172,39 +245,94 @@ class _ConversationTextContent extends StatelessWidget {
   final String title;
   final String preview;
   final bool hasUnread;
+  final String type;
 
   const _ConversationTextContent({
     required this.title,
     required this.preview,
     required this.hasUnread,
+    required this.type,
   });
 
   @override
   Widget build(BuildContext context) {
+    final typeLabel = _typeLabel(type);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w700,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFF102033),
+                  fontSize: 16,
+                  fontWeight: hasUnread ? FontWeight.w900 : FontWeight.w800,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ),
+            if (typeLabel != null) ...[
+              const SizedBox(width: 6),
+              _ConversationTypePill(label: typeLabel),
+            ],
+          ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         Text(
           preview,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: hasUnread ? Colors.black87 : Colors.grey.shade600,
+            color: hasUnread
+                ? const Color(0xFF243447)
+                : const Color(0xFF6B7A90),
             fontSize: 14,
-            fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
+            height: 1.2,
           ),
         ),
       ],
+    );
+  }
+
+  String? _typeLabel(String type) {
+    if (type == 'group') return 'Group';
+    if (type == 'announcement') return 'News';
+    return null;
+  }
+}
+
+class _ConversationTypePill extends StatelessWidget {
+  final String label;
+
+  const _ConversationTypePill({
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -223,42 +351,65 @@ class _ConversationTrailing extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final hasUnread = unreadCount > 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          timeLabel,
-          style: TextStyle(
-            color: hasUnread ? colorScheme.primary : Colors.grey.shade500,
-            fontSize: 12,
-            fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w400,
+    return SizedBox(
+      width: 46,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            timeLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: hasUnread ? colorScheme.primary : const Color(0xFF8A98AA),
+              fontSize: 12,
+              fontWeight: hasUnread ? FontWeight.w900 : FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 7),
-        if (hasUnread)
-          Container(
-            constraints: const BoxConstraints(
-              minWidth: 22,
-              minHeight: 22,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              unreadCount > 99 ? '99+' : unreadCount.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+          const SizedBox(height: 8),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: hasUnread
+                ? Container(
+              key: const ValueKey('unread'),
+              constraints: const BoxConstraints(
+                minWidth: 24,
+                minHeight: 24,
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary,
+                    const Color(0xFF0D47A1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.20),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Text(
+                unreadCount > 99 ? '99+' : unreadCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            )
+                : const SizedBox(
+              key: ValueKey('empty'),
+              height: 24,
             ),
-          )
-        else
-          const SizedBox(height: 22),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

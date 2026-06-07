@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../features/conversations/presentation/screens/new_group_chat_screen.dart';
+import '../../features/conversations/presentation/screens/new_direct_chat_screen.dart';
+import '../../features/conversations/presentation/screens/new_announcement_chat_screen.dart';
 import '../../features/auth/presentation/providers/auth_controller.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/conversations/presentation/screens/conversation_details_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/conversations/presentation/screens/conversations_screen.dart';
+import '../../features/messages/presentation/screens/message_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,6 +50,44 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ConversationsScreen.routePath,
         builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: MessageScreen.routePath,
+        builder: (context, state) {
+          final idText = state.pathParameters['conversationId'];
+          final conversationId = int.tryParse(idText ?? '');
+
+          if (conversationId == null) {
+            return const ConversationsScreen();
+          }
+
+          return MessageScreen(conversationId: conversationId);
+        },
+      ),
+      GoRoute(
+        path: NewDirectChatScreen.routePath,
+        builder: (context, state) => const NewDirectChatScreen(),
+      ),
+      GoRoute(
+        path: NewGroupChatScreen.routePath,
+        builder: (context, state) => const NewGroupChatScreen(),
+      ),
+      GoRoute(
+        path: NewAnnouncementChatScreen.routePath,
+        builder: (context, state) => const NewAnnouncementChatScreen(),
+      ),
+      GoRoute(
+        path: ConversationDetailsScreen.routePath,
+        builder: (context, state) {
+          final idText = state.pathParameters['conversationId'];
+          final conversationId = int.tryParse(idText ?? '');
+
+          if (conversationId == null) {
+            return const ConversationsScreen();
+          }
+
+          return ConversationDetailsScreen(conversationId: conversationId);
+        },
       ),
     ],
   );
