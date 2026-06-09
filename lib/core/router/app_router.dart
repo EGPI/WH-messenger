@@ -19,7 +19,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: LoginScreen.routePath,
+    initialLocation: ConversationsScreen.routePath,
     redirect: (context, state) {
       final isAuthRoute = state.matchedLocation == LoginScreen.routePath ||
           state.matchedLocation == SignupScreen.routePath;
