@@ -27,10 +27,18 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
 
-    try {
-      final user = await _authApi.me();
+    final cachedUser = await _storage.readUser();
 
-      state = AuthState.authenticated(user);
+    if (cachedUser != null) {
+      state = AuthState.authenticated(cachedUser);
+    }
+
+    try {
+      final freshUser = await _authApi.me();
+
+      await _storage.saveUser(freshUser);
+
+      state = AuthState.authenticated(freshUser);
     } catch (_) {
       await _storage.clearToken();
 
@@ -53,7 +61,10 @@ class AuthController extends Notifier<AuthState> {
         password: password,
       );
 
-      await _storage.saveToken(result.token);
+      await _storage.saveSession(
+        token: result.token,
+        user: result.user,
+      );
 
       state = AuthState.authenticated(result.user);
       return true;
@@ -83,7 +94,10 @@ class AuthController extends Notifier<AuthState> {
         password: password,
       );
 
-      await _storage.saveToken(result.token);
+      await _storage.saveSession(
+        token: result.token,
+        user: result.user,
+      );
 
       state = AuthState.authenticated(result.user);
       return true;
