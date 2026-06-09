@@ -20,13 +20,25 @@ class AuthUser {
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
       id: json['id'] as int,
-      name: json['name'] as String,
-      email: json['email'] as String,
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String?,
       phone: json['phone'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       lastSeenAt: json['last_seen_at'] as String?,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'avatar_url': avatarUrl,
+      'phone': phone,
+      'is_active': isActive,
+      'last_seen_at': lastSeenAt,
+    };
   }
 }
 
@@ -43,9 +55,11 @@ class AuthResponse {
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
-      message: json['message'] as String,
-      token: json['token'] as String,
-      user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
+      message: json['message'] as String? ?? '',
+      token: json['token'] as String? ?? '',
+      user: AuthUser.fromJson(
+        json['user'] as Map<String, dynamic>? ?? const {},
+      ),
     );
   }
 }
