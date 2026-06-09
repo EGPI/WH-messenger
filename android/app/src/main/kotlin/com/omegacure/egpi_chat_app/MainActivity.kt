@@ -1,4 +1,4 @@
-package com.example.egpi_chat_app
+package com.omegacure.egpi_chat_app
 
 import io.flutter.embedding.android.FlutterActivity
 
