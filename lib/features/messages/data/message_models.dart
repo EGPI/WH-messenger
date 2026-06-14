@@ -60,6 +60,7 @@ class ServerMessageModel {
   final String status;
   final ServerMessageSenderModel? sender;
   final List<ServerMessageReceiptModel> receipts;
+  final Map<String, dynamic> payload;
 
   const ServerMessageModel({
     required this.id,
@@ -76,6 +77,7 @@ class ServerMessageModel {
     required this.status,
     required this.sender,
     required this.receipts,
+    required this.payload,
   });
 
   factory ServerMessageModel.fromJson(Map<String, dynamic> json) {
@@ -92,6 +94,7 @@ class ServerMessageModel {
       serverSequence: _parseInt(json['server_sequence']),
       type: json['type']?.toString() ?? 'text',
       body: json['body']?.toString() ?? '',
+      payload: _parseMap(json['payload']),
       serverReceivedAt: _parseDateTime(json['server_received_at']),
       sentAt: _parseDateTime(json['sent_at']),
       createdAt: _parseDateTime(json['created_at']),
@@ -213,4 +216,19 @@ DateTime? _parseDateTime(dynamic value) {
   if (text.isEmpty) return null;
 
   return DateTime.tryParse(text);
+}
+
+Map<String, dynamic> _parseMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+
+  if (value is Map) {
+    return value.map(
+          (key, value) => MapEntry(
+        key.toString(),
+        value,
+      ),
+    );
+  }
+
+  return <String, dynamic>{};
 }

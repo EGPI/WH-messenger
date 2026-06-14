@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
@@ -14,6 +16,9 @@ extension ServerMessageModelMapper on ServerMessageModel {
       senderId: Value(senderId),
       body: Value(body),
       type: Value(type),
+      payloadJson: Value(
+        payload.isEmpty ? null : jsonEncode(payload),
+      ),
       status: Value(localStatus),
       clientMessageId: Value(clientMessageId),
 

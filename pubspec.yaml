@@ -68,6 +68,8 @@ dependencies:
   flutter_native_splash: ^2.4.7
   connectivity_plus: ^7.1.1
   web_socket_channel: ^3.0.3
+  flutter_webrtc: ^1.4.1
+  flutter_foreground_task: ^9.2.2
 
 dev_dependencies:
   flutter_test:

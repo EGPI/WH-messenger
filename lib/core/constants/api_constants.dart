@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = 'https://wh-egpi.com/messenger-api/api';
+  static const String baseUrl = 'http://192.168.1.7:8000/api';
 
   static const String login = '/auth/login';
   static const String register = '/auth/register';
@@ -34,5 +34,29 @@ class ApiConstants {
     required int userId,
   }) {
     return '/conversations/$conversationId/admins/$userId';
+  }
+
+  static String startAudioCall(int conversationId) {
+    return '/conversations/$conversationId/calls/audio/start';
+  }
+
+  static String acceptCall(int callId) {
+    return '/calls/$callId/accept';
+  }
+
+  static String rejectCall(int callId) {
+    return '/calls/$callId/reject';
+  }
+
+  static String endCall(int callId) {
+    return '/calls/$callId/end';
+  }
+
+  static String signalCall(int callId) {
+    return '/calls/$callId/signal';
+  }
+
+  static String callDetails(int callId) {
+    return '/calls/$callId';
   }
 }

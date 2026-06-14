@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
+import '../../../calls/presentation/providers/call_signaling_controller.dart';
 import '../../../../core/network/dio_provider.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../../auth/presentation/providers/auth_state.dart';
@@ -172,6 +172,11 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
       return;
     }
 
+    if (_isCallFrame(frame)) {
+      await _handleCallEvent(frame);
+      return;
+    }
+
     await _handleChatEvent(frame);
   }
 
@@ -282,6 +287,92 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
     }
 
     return auth;
+  }
+
+  String _normalizeEventName(String value) {
+    final trimmed = value.trim();
+
+    if (trimmed.startsWith('.')) {
+      return trimmed.substring(1);
+    }
+
+    return trimmed;
+  }
+
+  bool _isCallEventName(String eventName) {
+    return _normalizeEventName(eventName).startsWith('call.');
+  }
+
+  bool _isCallFrame(Map<String, dynamic> frame) {
+    final frameEventName = frame['event']?.toString() ?? '';
+
+    if (_isCallEventName(frameEventName)) {
+      return true;
+    }
+
+    try {
+      final data = _decodeFrameData(frame);
+      final payloadEventType = data['event_type']?.toString() ?? '';
+
+      return _isCallEventName(payloadEventType);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _handleCallEvent(Map<String, dynamic> frame) async {
+    try {
+      final data = _decodeFrameData(frame);
+
+      final frameEventName = frame['event']?.toString() ?? '';
+      final payloadEventType = data['event_type']?.toString();
+
+      final normalizedEventName = _normalizeEventName(
+        payloadEventType != null && payloadEventType.trim().isNotEmpty
+            ? payloadEventType
+            : frameEventName,
+      );
+
+      final eventPayload = <String, dynamic>{
+        ...data,
+        'event_type': normalizedEventName,
+      };
+
+      ref
+          .read(callSignalingControllerProvider)
+          .handleRealtimeJson(eventPayload);
+    } catch (error) {
+      state = state.copyWith(
+        status: RealtimeConnectionStatus.error,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+
+  Map<String, dynamic> _decodeFrameData(Map<String, dynamic> frame) {
+    final rawData = frame['data'];
+
+    if (rawData is String) {
+      final decoded = jsonDecode(rawData);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    }
+
+    if (rawData is Map<String, dynamic>) {
+      return rawData;
+    }
+
+    if (rawData is Map) {
+      return Map<String, dynamic>.from(rawData);
+    }
+
+    return <String, dynamic>{};
   }
 
   Future<void> _handleChatEvent(Map<String, dynamic> frame) async {

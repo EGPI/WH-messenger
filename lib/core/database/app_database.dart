@@ -28,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -40,6 +40,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await migrator.createTable(localUsers);
           await migrator.createTable(localConversationParticipants);
+        }
+
+        if (from < 3) {
+          await migrator.addColumn(
+            localMessages,
+            localMessages.payloadJson,
+          );
         }
       },
     );
