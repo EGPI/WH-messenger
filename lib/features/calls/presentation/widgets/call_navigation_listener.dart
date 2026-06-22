@@ -41,6 +41,7 @@ class _CallNavigationListenerState
   }
 
   void _openActiveCallScreen() {
+    FocusManager.instance.primaryFocus?.unfocus();
     ref.read(callControllerProvider.notifier).restoreCallScreen();
     ref.read(routerProvider).push(AudioCallScreen.routePath);
   }

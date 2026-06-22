@@ -72,12 +72,12 @@ class _NewDirectChatScreenState extends ConsumerState<NewDirectChatScreen> {
   Widget build(BuildContext context) {
     ref.listen(
       newDirectChatControllerProvider.select((state) => state.errorMessage),
-          (previous, next) {
+      (previous, next) {
         if (next == null || next == previous) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next)));
       },
     );
 
@@ -168,10 +168,7 @@ class _HeroCard extends StatelessWidget {
   final bool isSearching;
   final bool isCreating;
 
-  const _HeroCard({
-    required this.isSearching,
-    required this.isCreating,
-  });
+  const _HeroCard({required this.isSearching, required this.isCreating});
 
   @override
   Widget build(BuildContext context) {
@@ -195,10 +192,7 @@ class _HeroCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primary,
-              const Color(0xFF0D47A1),
-            ],
+            colors: [colorScheme.primary, const Color(0xFF0D47A1)],
           ),
           boxShadow: [
             BoxShadow(
@@ -216,9 +210,7 @@ class _HeroCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.20),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
               ),
               child: const Icon(
                 Icons.person_search_rounded,
@@ -261,27 +253,27 @@ class _HeroCard extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               child: isSearching || isCreating
                   ? const SizedBox.square(
-                key: ValueKey('busy'),
-                dimension: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  color: Colors.white,
-                ),
-              )
+                      key: ValueKey('busy'),
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
                   : Container(
-                key: const ValueKey('ready'),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 21,
-                ),
-              ),
+                      key: const ValueKey('ready'),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 21,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -317,9 +309,7 @@ class _ActionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.88),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.92),
-            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.045),
@@ -338,10 +328,7 @@ class _ActionCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary,
-                      const Color(0xFF42A5F5),
-                    ],
+                    colors: [colorScheme.primary, const Color(0xFF42A5F5)],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -351,11 +338,7 @@ class _ActionCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 25,
-                ),
+                child: Icon(icon, color: Colors.white, size: 25),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -388,10 +371,7 @@ class _ActionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF8A98AA),
-              ),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A98AA)),
             ],
           ),
         ),
@@ -404,10 +384,7 @@ class _SearchBox extends StatelessWidget {
   final TextEditingController controller;
   final bool isSearching;
 
-  const _SearchBox({
-    required this.controller,
-    required this.isSearching,
-  });
+  const _SearchBox({required this.controller, required this.isSearching});
 
   @override
   Widget build(BuildContext context) {
@@ -419,9 +396,7 @@ class _SearchBox extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.94),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.94)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.045),
@@ -448,18 +423,15 @@ class _SearchBox extends StatelessWidget {
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              color: colorScheme.primary,
-            ),
+            prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary),
             suffixIcon: isSearching
                 ? const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
                 : null,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -509,12 +481,7 @@ class _UsersList extends StatelessWidget {
 
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        2,
-        16,
-        24 + keyboardBottomInset,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 2, 16, 24 + keyboardBottomInset),
       itemCount: users.length,
       itemBuilder: (context, index) {
         final user = users[index];
@@ -560,9 +527,7 @@ class _UserTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.88),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.92),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.045),
@@ -581,10 +546,7 @@ class _UserTile extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        colorScheme.primary,
-                        const Color(0xFF42A5F5),
-                      ],
+                      colors: [colorScheme.primary, const Color(0xFF42A5F5)],
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -607,10 +569,7 @@ class _UserTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 13),
                 Expanded(
-                  child: _UserText(
-                    name: user.name,
-                    email: user.email,
-                  ),
+                  child: _UserText(name: user.name, email: user.email),
                 ),
                 const SizedBox(width: 8),
                 Container(
@@ -659,10 +618,7 @@ class _UserText extends StatelessWidget {
   final String name;
   final String email;
 
-  const _UserText({
-    required this.name,
-    required this.email,
-  });
+  const _UserText({required this.name, required this.email});
 
   @override
   Widget build(BuildContext context) {
@@ -728,9 +684,7 @@ class _UserSkeletonTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.76),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.9),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
       ),
       child: Row(
         children: [
@@ -851,72 +805,80 @@ class _CenteredInfoView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 42),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.92),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.045),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 84,
-                height: 84,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight = constraints.maxHeight > 36
+            ? constraints.maxHeight - 36
+            : 0.0;
+
+        return SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      iconColor.withValues(alpha: 0.12),
-                      const Color(0xFF42A5F5).withValues(alpha: 0.14),
-                    ],
+                  color: Colors.white.withValues(alpha: 0.78),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.92),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.045),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  icon,
-                  size: 42,
-                  color: iconColor,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            iconColor.withValues(alpha: 0.12),
+                            const Color(0xFF42A5F5).withValues(alpha: 0.14),
+                          ],
+                        ),
+                      ),
+                      child: Icon(icon, size: 42, color: iconColor),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF102033),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7A90),
+                        fontSize: 14.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 18),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF102033),
-                  fontSize: 21,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF6B7A90),
-                  fontSize: 14.5,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -931,11 +893,7 @@ class _NewChatBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFEAF4FF),
-            Color(0xFFF8FBFF),
-            Color(0xFFEFF6FF),
-          ],
+          colors: [Color(0xFFEAF4FF), Color(0xFFF8FBFF), Color(0xFFEFF6FF)],
         ),
       ),
       child: Stack(
@@ -943,18 +901,12 @@ class _NewChatBackground extends StatelessWidget {
           Positioned(
             top: -120,
             right: -80,
-            child: _BlurCircle(
-              size: 240,
-              color: Color(0xFF90CAF9),
-            ),
+            child: _BlurCircle(size: 240, color: Color(0xFF90CAF9)),
           ),
           Positioned(
             bottom: -130,
             left: -90,
-            child: _BlurCircle(
-              size: 250,
-              color: Color(0xFF1565C0),
-            ),
+            child: _BlurCircle(size: 250, color: Color(0xFF1565C0)),
           ),
         ],
       ),
@@ -966,10 +918,7 @@ class _BlurCircle extends StatelessWidget {
   final double size;
   final Color color;
 
-  const _BlurCircle({
-    required this.size,
-    required this.color,
-  });
+  const _BlurCircle({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {

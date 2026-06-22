@@ -87,6 +87,7 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
     return PopScope(
       canPop: _isMinimizing || !callState.hasActiveCall,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
             const _CallBackground(),
