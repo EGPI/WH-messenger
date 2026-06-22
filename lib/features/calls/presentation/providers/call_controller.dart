@@ -50,6 +50,8 @@ class CallController extends Notifier<CallState> {
       clearError: true,
       clearActiveCall: true,
       isScreenMinimized: false,
+      isMuted: false,
+      isSpeakerphoneEnabled: false,
     );
 
     try {
@@ -61,6 +63,8 @@ class CallController extends Notifier<CallState> {
         phase: CallPhase.outgoingRinging,
         activeCall: call,
         isScreenMinimized: false,
+        isMuted: false,
+        isSpeakerphoneEnabled: false,
       );
 
       return call;
@@ -89,6 +93,8 @@ class CallController extends Notifier<CallState> {
       activeCall: call,
       clearError: true,
       isScreenMinimized: false,
+      isMuted: false,
+      isSpeakerphoneEnabled: false,
     );
   }
 
@@ -108,6 +114,8 @@ class CallController extends Notifier<CallState> {
         phase: CallPhase.accepted,
         activeCall: acceptedCall,
         isScreenMinimized: false,
+        isMuted: false,
+        isSpeakerphoneEnabled: false,
       );
 
       await _ensureWebRtcInitialized(acceptedCall);
@@ -139,6 +147,8 @@ class CallController extends Notifier<CallState> {
         phase: CallPhase.ended,
         activeCall: rejectedCall,
         isScreenMinimized: false,
+        isMuted: false,
+        isSpeakerphoneEnabled: false,
       );
     } catch (error) {
       await _disposeWebRtc();
@@ -168,6 +178,8 @@ class CallController extends Notifier<CallState> {
         phase: CallPhase.ended,
         activeCall: endedCall,
         isScreenMinimized: false,
+        isMuted: false,
+        isSpeakerphoneEnabled: false,
       );
     } catch (error) {
       await _disposeWebRtc();
@@ -193,6 +205,13 @@ class CallController extends Notifier<CallState> {
       activeCall: call,
       clearError: true,
       isScreenMinimized:
+          nextPhase == CallPhase.ended || nextPhase == CallPhase.failed
+          ? false
+          : null,
+      isMuted: nextPhase == CallPhase.ended || nextPhase == CallPhase.failed
+          ? false
+          : null,
+      isSpeakerphoneEnabled:
           nextPhase == CallPhase.ended || nextPhase == CallPhase.failed
           ? false
           : null,
@@ -272,15 +291,44 @@ class CallController extends Notifier<CallState> {
   }
 
   Future<void> toggleMuted() async {
-    await _webRtcAudioService.toggleMuted();
+    if (!_webRtcAudioService.isInitialized) {
+      state = state.copyWith(errorMessage: 'Audio is still connecting.');
+      return;
+    }
+
+    try {
+      await _webRtcAudioService.toggleMuted();
+      state = state.copyWith(isMuted: _webRtcAudioService.isMuted);
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _friendlyError(error, fallback: 'Could not toggle mute.'),
+      );
+    }
   }
 
   Future<void> setSpeakerphoneEnabled(bool enabled) async {
-    await _webRtcAudioService.setSpeakerphoneEnabled(enabled);
+    if (!_webRtcAudioService.isInitialized) {
+      state = state.copyWith(errorMessage: 'Audio is still connecting.');
+      return;
+    }
+
+    try {
+      await _webRtcAudioService.setSpeakerphoneEnabled(enabled);
+      state = state.copyWith(
+        isSpeakerphoneEnabled: _webRtcAudioService.isSpeakerphoneEnabled,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _friendlyError(
+          error,
+          fallback: 'Could not change speaker output.',
+        ),
+      );
+    }
   }
 
   Future<void> toggleSpeakerphone() async {
-    await _webRtcAudioService.toggleSpeakerphone();
+    await setSpeakerphoneEnabled(!_webRtcAudioService.isSpeakerphoneEnabled);
   }
 
   Future<void> _prepareCallerAndSendOffer(CallModel call) async {
@@ -353,6 +401,8 @@ class CallController extends Notifier<CallState> {
         phase: CallPhase.accepted,
         activeCall: call,
         clearError: true,
+        isMuted: _webRtcAudioService.isMuted,
+        isSpeakerphoneEnabled: _webRtcAudioService.isSpeakerphoneEnabled,
       );
     } catch (error) {
       state = state.copyWith(
@@ -464,6 +514,11 @@ class CallController extends Notifier<CallState> {
       onConnectionStateChanged: (connectionState) {
         _handlePeerConnectionState(call, connectionState);
       },
+    );
+
+    state = state.copyWith(
+      isMuted: _webRtcAudioService.isMuted,
+      isSpeakerphoneEnabled: _webRtcAudioService.isSpeakerphoneEnabled,
     );
   }
 

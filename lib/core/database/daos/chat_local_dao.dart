@@ -418,6 +418,7 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required String body,
     required DateTime? serverReceivedAt,
     required bool incrementUnread,
+    required bool resetUnread,
   }) async {
     var insertedNewMessage = false;
 
@@ -443,6 +444,12 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       final currentConversation = await findConversationById(conversationId);
 
       if (currentConversation != null) {
+        final unreadCount = resetUnread
+            ? 0
+            : incrementUnread && insertedNewMessage
+                ? currentConversation.unreadCount + 1
+                : currentConversation.unreadCount;
+
         await (update(localConversations)
           ..where((t) => t.id.equals(conversationId)))
             .write(
@@ -451,9 +458,7 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
             lastMessagePreview: Value(body),
             lastMessageSenderId: Value(senderId),
             lastMessageAt: Value(serverReceivedAt),
-            unreadCount: incrementUnread && insertedNewMessage
-                ? Value(currentConversation.unreadCount + 1)
-                : Value(currentConversation.unreadCount),
+            unreadCount: Value(unreadCount),
             locallyUpdatedAt: Value(DateTime.now()),
           ),
         );

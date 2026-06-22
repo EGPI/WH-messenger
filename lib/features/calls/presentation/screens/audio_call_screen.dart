@@ -147,6 +147,26 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
                       ),
                     ),
                     const Spacer(),
+                    if (callState.phase == CallPhase.accepted) ...[
+                      _AudioModeControls(
+                        state: callState,
+                        onToggleMuted: () {
+                          unawaited(
+                            ref
+                                .read(callControllerProvider.notifier)
+                                .toggleMuted(),
+                          );
+                        },
+                        onToggleSpeaker: () {
+                          unawaited(
+                            ref
+                                .read(callControllerProvider.notifier)
+                                .toggleSpeakerphone(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 28),
+                    ],
                     _CallActions(
                       state: callState,
                       onAccept: () {
@@ -433,16 +453,64 @@ class _CallActions extends StatelessWidget {
   }
 }
 
+class _AudioModeControls extends StatelessWidget {
+  final CallState state;
+  final VoidCallback onToggleMuted;
+  final VoidCallback onToggleSpeaker;
+
+  const _AudioModeControls({
+    required this.state,
+    required this.onToggleMuted,
+    required this.onToggleSpeaker,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = !state.isBusy;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _RoundCallButton(
+          label: state.isMuted ? 'Unmute' : 'Mute',
+          icon: state.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+          color: state.isMuted ? Colors.white : const Color(0x332A5C9E),
+          foregroundColor: state.isMuted
+              ? const Color(0xFF0D47A1)
+              : Colors.white,
+          onTap: enabled ? onToggleMuted : null,
+        ),
+        const SizedBox(width: 28),
+        _RoundCallButton(
+          label: state.isSpeakerphoneEnabled ? 'Speaker' : 'Earpiece',
+          icon: state.isSpeakerphoneEnabled
+              ? Icons.volume_up_rounded
+              : Icons.volume_down_rounded,
+          color: state.isSpeakerphoneEnabled
+              ? Colors.white
+              : const Color(0x332A5C9E),
+          foregroundColor: state.isSpeakerphoneEnabled
+              ? const Color(0xFF0D47A1)
+              : Colors.white,
+          onTap: enabled ? onToggleSpeaker : null,
+        ),
+      ],
+    );
+  }
+}
+
 class _RoundCallButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final Color foregroundColor;
   final VoidCallback? onTap;
 
   const _RoundCallButton({
     required this.label,
     required this.icon,
     required this.color,
+    this.foregroundColor = Colors.white,
     required this.onTap,
   });
 
@@ -462,7 +530,7 @@ class _RoundCallButton extends StatelessWidget {
             child: SizedBox(
               width: 68,
               height: 68,
-              child: Icon(icon, color: Colors.white, size: 31),
+              child: Icon(icon, color: foregroundColor, size: 31),
             ),
           ),
         ),

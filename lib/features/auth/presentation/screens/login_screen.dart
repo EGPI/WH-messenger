@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth_validators.dart';
 import '../providers/auth_controller.dart';
 import '../widgets/auth_primary_button.dart';
 import '../widgets/auth_text_field.dart';
@@ -32,10 +33,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(authControllerProvider.notifier).login(
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .login(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
 
     if (!mounted || !success) return;
 
@@ -48,14 +51,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       authControllerProvider.select((state) => state.isSubmitting),
     );
 
-    ref.listen(authControllerProvider.select((state) => state.errorMessage),
-            (previous, next) {
-          if (next == null || next == previous) return;
+    ref.listen(authControllerProvider.select((state) => state.errorMessage), (
+      previous,
+      next,
+    ) {
+      if (next == null || next == previous) return;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(next)),
-          );
-        });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next)));
+    });
 
     return Scaffold(
       body: Stack(
@@ -69,6 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   constraints: const BoxConstraints(maxWidth: 430),
                   child: Form(
                     key: _formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -78,7 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _emailController,
                           label: 'Email',
                           keyboardType: TextInputType.emailAddress,
-                          validator: _validateEmail,
+                          validator: AuthValidators.egpiEmail,
                         ),
                         const SizedBox(height: 14),
                         AuthTextField(
@@ -86,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           label: 'Password',
                           obscureText: true,
                           textInputAction: TextInputAction.done,
-                          validator: _validatePassword,
+                          validator: AuthValidators.requiredPassword,
                         ),
                         const SizedBox(height: 24),
                         AuthPrimaryButton(
@@ -98,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextButton(
                           onPressed: isSubmitting
                               ? null
-                              : () => context.go('/signup'),
+                              : () => context.push('/signup'),
                           child: const Text('Create a new account'),
                         ),
                       ],
@@ -111,20 +115,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ],
       ),
     );
-  }
-
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-
-    if (email.isEmpty) return 'Email is required.';
-    if (!email.contains('@')) return 'Enter a valid email.';
-
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if ((value ?? '').isEmpty) return 'Password is required.';
-    return null;
   }
 }
 
@@ -143,10 +133,7 @@ class _LoginHeader extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [
-                colorScheme.primary,
-                const Color(0xFF42A5F5),
-              ],
+              colors: [colorScheme.primary, const Color(0xFF42A5F5)],
             ),
             boxShadow: [
               BoxShadow(
@@ -156,11 +143,8 @@ class _LoginHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.chat_bubble_rounded,
-            size: 36,
-            color: Colors.white,
-          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset('assets/icon/app_icon.jpeg', fit: BoxFit.cover),
         ),
         const SizedBox(height: 22),
         const Text(
@@ -344,14 +328,8 @@ class _MauiStyleEllipse extends StatelessWidget {
             gradient: RadialGradient(
               center: center,
               radius: 0.5,
-              colors: [
-                color,
-                color.withValues(alpha: 0),
-              ],
-              stops: const [
-                0.0,
-                1.0,
-              ],
+              colors: [color, color.withValues(alpha: 0)],
+              stops: const [0.0, 1.0],
             ),
           ),
         ),
@@ -380,10 +358,7 @@ class _ParticlePainter extends CustomPainter {
   final List<_AuthParticle> particles;
   final double progress;
 
-  const _ParticlePainter({
-    required this.particles,
-    required this.progress,
-  });
+  const _ParticlePainter({required this.particles, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -396,15 +371,10 @@ class _ParticlePainter extends CustomPainter {
       final rawY = particle.y - ((progress * 80 * particle.speed) % 800);
       final wrappedY = rawY < 0 ? rawY + 800 : rawY;
 
-      paint.color = const Color(0xFF87CEEB).withValues(
-        alpha: particle.opacity,
-      );
+      paint.color = const Color(0xFF87CEEB).withValues(alpha: particle.opacity);
 
       canvas.drawCircle(
-        Offset(
-          particle.x * scaleX,
-          wrappedY * scaleY,
-        ),
+        Offset(particle.x * scaleX, wrappedY * scaleY),
         particle.radius * scaleX.clamp(0.85, 1.25),
         paint,
       );

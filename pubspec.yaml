@@ -1,7 +1,7 @@
 name: egpi_chat_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.11.5
@@ -98,6 +98,9 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/icon/app_icon.jpeg
 
   # assets:
   #   - assets/images/

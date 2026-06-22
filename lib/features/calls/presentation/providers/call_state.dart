@@ -16,19 +16,25 @@ class CallState {
   final CallModel? activeCall;
   final String? errorMessage;
   final bool isScreenMinimized;
+  final bool isMuted;
+  final bool isSpeakerphoneEnabled;
 
   const CallState({
     required this.phase,
     required this.activeCall,
     required this.errorMessage,
     required this.isScreenMinimized,
+    required this.isMuted,
+    required this.isSpeakerphoneEnabled,
   });
 
   const CallState.initial()
     : phase = CallPhase.idle,
       activeCall = null,
       errorMessage = null,
-      isScreenMinimized = false;
+      isScreenMinimized = false,
+      isMuted = false,
+      isSpeakerphoneEnabled = false;
 
   bool get hasActiveCall {
     if (activeCall == null) return false;
@@ -63,12 +69,17 @@ class CallState {
     String? errorMessage,
     bool clearError = false,
     bool? isScreenMinimized,
+    bool? isMuted,
+    bool? isSpeakerphoneEnabled,
   }) {
     return CallState(
       phase: phase ?? this.phase,
       activeCall: clearActiveCall ? null : activeCall ?? this.activeCall,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       isScreenMinimized: isScreenMinimized ?? this.isScreenMinimized,
+      isMuted: isMuted ?? this.isMuted,
+      isSpeakerphoneEnabled:
+          isSpeakerphoneEnabled ?? this.isSpeakerphoneEnabled,
     );
   }
 }
