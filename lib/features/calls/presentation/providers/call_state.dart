@@ -15,17 +15,20 @@ class CallState {
   final CallPhase phase;
   final CallModel? activeCall;
   final String? errorMessage;
+  final bool isScreenMinimized;
 
   const CallState({
     required this.phase,
     required this.activeCall,
     required this.errorMessage,
+    required this.isScreenMinimized,
   });
 
   const CallState.initial()
-      : phase = CallPhase.idle,
-        activeCall = null,
-        errorMessage = null;
+    : phase = CallPhase.idle,
+      activeCall = null,
+      errorMessage = null,
+      isScreenMinimized = false;
 
   bool get hasActiveCall {
     if (activeCall == null) return false;
@@ -59,11 +62,13 @@ class CallState {
     bool clearActiveCall = false,
     String? errorMessage,
     bool clearError = false,
+    bool? isScreenMinimized,
   }) {
     return CallState(
       phase: phase ?? this.phase,
       activeCall: clearActiveCall ? null : activeCall ?? this.activeCall,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      isScreenMinimized: isScreenMinimized ?? this.isScreenMinimized,
     );
   }
 }

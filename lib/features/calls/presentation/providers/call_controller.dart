@@ -49,6 +49,7 @@ class CallController extends Notifier<CallState> {
       phase: CallPhase.starting,
       clearError: true,
       clearActiveCall: true,
+      isScreenMinimized: false,
     );
 
     try {
@@ -59,6 +60,7 @@ class CallController extends Notifier<CallState> {
       state = state.copyWith(
         phase: CallPhase.outgoingRinging,
         activeCall: call,
+        isScreenMinimized: false,
       );
 
       return call;
@@ -86,6 +88,7 @@ class CallController extends Notifier<CallState> {
       phase: CallPhase.incomingRinging,
       activeCall: call,
       clearError: true,
+      isScreenMinimized: false,
     );
   }
 
@@ -104,6 +107,7 @@ class CallController extends Notifier<CallState> {
       state = state.copyWith(
         phase: CallPhase.accepted,
         activeCall: acceptedCall,
+        isScreenMinimized: false,
       );
 
       await _ensureWebRtcInitialized(acceptedCall);
@@ -131,7 +135,11 @@ class CallController extends Notifier<CallState> {
       final rejectedCall = await _callApi.rejectCall(callId: call.id);
       await _disposeWebRtc();
 
-      state = state.copyWith(phase: CallPhase.ended, activeCall: rejectedCall);
+      state = state.copyWith(
+        phase: CallPhase.ended,
+        activeCall: rejectedCall,
+        isScreenMinimized: false,
+      );
     } catch (error) {
       await _disposeWebRtc();
 
@@ -156,7 +164,11 @@ class CallController extends Notifier<CallState> {
 
       await _disposeWebRtc();
 
-      state = state.copyWith(phase: CallPhase.ended, activeCall: endedCall);
+      state = state.copyWith(
+        phase: CallPhase.ended,
+        activeCall: endedCall,
+        isScreenMinimized: false,
+      );
     } catch (error) {
       await _disposeWebRtc();
 
@@ -180,6 +192,10 @@ class CallController extends Notifier<CallState> {
       phase: nextPhase,
       activeCall: call,
       clearError: true,
+      isScreenMinimized:
+          nextPhase == CallPhase.ended || nextPhase == CallPhase.failed
+          ? false
+          : null,
     );
 
     if (nextPhase == CallPhase.accepted && _currentUserIsCaller(call)) {
@@ -225,6 +241,18 @@ class CallController extends Notifier<CallState> {
     unawaited(_disposeWebRtc());
 
     state = const CallState.initial();
+  }
+
+  void minimizeCallScreen() {
+    if (!state.hasActiveCall) return;
+
+    state = state.copyWith(isScreenMinimized: true);
+  }
+
+  void restoreCallScreen() {
+    if (!state.isScreenMinimized) return;
+
+    state = state.copyWith(isScreenMinimized: false);
   }
 
   void resetCallState() {
@@ -440,13 +468,13 @@ class CallController extends Notifier<CallState> {
   }
 
   void _handlePeerConnectionState(
-      CallModel call,
-      RTCPeerConnectionState connectionState,
-      ) {
+    CallModel call,
+    RTCPeerConnectionState connectionState,
+  ) {
     if (state.activeCall?.id != call.id) return;
 
     if (connectionState ==
-        RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+            RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
         connectionState ==
             RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
       if (state.phase == CallPhase.accepted ||
@@ -506,7 +534,7 @@ class CallController extends Notifier<CallState> {
 
     final peerName =
         call.otherParticipant(currentUserId)?.displayName ??
-            _fallbackPeerName(call, currentUserId);
+        _fallbackPeerName(call, currentUserId);
 
     await _callForegroundService.startForCall(
       callId: call.id,

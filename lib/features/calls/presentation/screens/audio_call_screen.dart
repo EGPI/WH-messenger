@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../providers/call_controller.dart';
 import '../providers/call_state.dart';
@@ -20,10 +21,17 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
   Timer? _timer;
   int _tick = 0;
   bool _isDismissing = false;
+  bool _isMinimizing = false;
 
   @override
   void initState() {
     super.initState();
+
+    Future.microtask(() {
+      if (!mounted) return;
+
+      ref.read(callControllerProvider.notifier).restoreCallScreen();
+    });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -38,7 +46,7 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
   void dispose() {
     _timer?.cancel();
 
-    if (!_isDismissing) {
+    if (!_isDismissing && !_isMinimizing) {
       final callState = ref.read(callControllerProvider);
       final call = callState.activeCall;
 
@@ -77,7 +85,7 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
     final durationText = _durationText(callState);
 
     return PopScope(
-      canPop: !callState.hasActiveCall,
+      canPop: _isMinimizing || !callState.hasActiveCall,
       child: Scaffold(
         body: Stack(
           children: [
@@ -90,15 +98,15 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
-                        tooltip: 'Close',
+                        tooltip: callState.hasActiveCall
+                            ? 'Minimize call'
+                            : 'Close',
                         onPressed: callState.hasActiveCall
-                            ? null
+                            ? _minimizeCallScreen
                             : () => Navigator.of(context).maybePop(),
                         icon: Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          color: Colors.white.withValues(
-                            alpha: callState.hasActiveCall ? 0.28 : 0.92,
-                          ),
+                          color: Colors.white.withValues(alpha: 0.92),
                           size: 34,
                         ),
                       ),
@@ -185,6 +193,28 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
             Navigator.of(context).maybePop();
           }),
     );
+  }
+
+  Future<void> _minimizeCallScreen() async {
+    if (_isMinimizing) return;
+
+    setState(() {
+      _isMinimizing = true;
+    });
+
+    ref.read(callControllerProvider.notifier).minimizeCallScreen();
+    await WidgetsBinding.instance.endOfFrame;
+
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context);
+
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    ref.read(routerProvider).go('/conversations');
   }
 
   String _peerName({
