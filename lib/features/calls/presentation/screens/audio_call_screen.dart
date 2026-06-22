@@ -3,17 +3,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
-
-import '../../data/call_debug_log.dart';
 import '../../../auth/presentation/providers/auth_controller.dart';
 import '../providers/call_controller.dart';
 import '../providers/call_state.dart';
 
 class AudioCallScreen extends ConsumerStatefulWidget {
-  const AudioCallScreen({
-    super.key,
-  });
+  const AudioCallScreen({super.key});
 
   static const routePath = '/calls/active';
 
@@ -24,6 +19,7 @@ class AudioCallScreen extends ConsumerStatefulWidget {
 class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
   Timer? _timer;
   int _tick = 0;
+  bool _isDismissing = false;
 
   @override
   void initState() {
@@ -42,30 +38,35 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
   void dispose() {
     _timer?.cancel();
 
+    if (!_isDismissing) {
+      final callState = ref.read(callControllerProvider);
+      final call = callState.activeCall;
+
+      if (call != null && !call.isFinished) {
+        unawaited(
+          ref.read(callControllerProvider.notifier).dismissCallScreen(),
+        );
+      }
+    }
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final callState = ref.watch(callControllerProvider);
-    final debugLogs = ref.watch(callDebugLogProvider);
+    ref.listen(callControllerProvider.select((state) => state.errorMessage), (
+      previous,
+      next,
+    ) {
+      if (next == null || next == previous) return;
 
-    ref.listen(
-      callControllerProvider.select((state) => state.errorMessage),
-          (previous, next) {
-        if (next == null || next == previous) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next)),
-        );
-      },
-    );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next)));
+    });
 
     final currentUserId = ref.watch(
       authControllerProvider.select((state) => state.user?.id),
     );
-
-    final call = callState.activeCall;
 
     final peerName = _peerName(
       currentUserId: currentUserId,
@@ -81,33 +82,6 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
         body: Stack(
           children: [
             const _CallBackground(),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: SafeArea(
-                child: _CallDebugButton(
-                  logs: debugLogs,
-                  onCopy: () async {
-                    final text = ref.read(callDebugLogProvider.notifier).exportText();
-
-                    await Clipboard.setData(
-                      ClipboardData(text: text),
-                    );
-
-                    if (!context.mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Call debug logs copied'),
-                      ),
-                    );
-                  },
-                  onClear: () {
-                    ref.read(callDebugLogProvider.notifier).clear();
-                  },
-                ),
-              ),
-            ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
@@ -153,7 +127,9 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
                       duration: const Duration(milliseconds: 220),
                       child: Text(
                         durationText ?? statusText,
-                        key: ValueKey('${callState.phase}-$durationText-$_tick'),
+                        key: ValueKey(
+                          '${callState.phase}-$durationText-$_tick',
+                        ),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.78),
@@ -162,17 +138,6 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
                         ),
                       ),
                     ),
-                    if (call != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Call #${call.id}',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.42),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
                     const Spacer(),
                     _CallActions(
                       state: callState,
@@ -192,11 +157,7 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
                             .endActiveCall();
                       },
                       onDone: () {
-                        ref
-                            .read(callControllerProvider.notifier)
-                            .resetCallState();
-
-                        Navigator.of(context).maybePop();
+                        _dismissCallScreen();
                       },
                     ),
                   ],
@@ -206,6 +167,23 @@ class _AudioCallScreenState extends ConsumerState<AudioCallScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _dismissCallScreen() {
+    if (_isDismissing) return;
+
+    _isDismissing = true;
+
+    unawaited(
+      ref
+          .read(callControllerProvider.notifier)
+          .dismissCallScreen()
+          .whenComplete(() {
+            if (!mounted) return;
+
+            Navigator.of(context).maybePop();
+          }),
     );
   }
 
@@ -289,10 +267,7 @@ class _CallAvatar extends StatelessWidget {
   final String name;
   final bool isIncoming;
 
-  const _CallAvatar({
-    required this.name,
-    required this.isIncoming,
-  });
+  const _CallAvatar({required this.name, required this.isIncoming});
 
   @override
   Widget build(BuildContext context) {
@@ -306,10 +281,7 @@ class _CallAvatar extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFFFFFF),
-            Color(0xFFD6EAFF),
-          ],
+          colors: [Color(0xFFFFFFFF), Color(0xFFD6EAFF)],
         ),
         boxShadow: [
           BoxShadow(
@@ -340,10 +312,7 @@ class _CallAvatar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF2E7D32),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 3,
-                  ),
+                  border: Border.all(color: Colors.white, width: 3),
                 ),
                 child: const Icon(
                   Icons.call_received_rounded,
@@ -463,11 +432,7 @@ class _RoundCallButton extends StatelessWidget {
             child: SizedBox(
               width: 68,
               height: 68,
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 31,
-              ),
+              child: Icon(icon, color: Colors.white, size: 31),
             ),
           ),
         ),
@@ -506,22 +471,12 @@ class _WideCallButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: color,
         foregroundColor: foregroundColor,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 34,
-          vertical: 16,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       ),
       onPressed: onTap,
       icon: Icon(icon),
-      label: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -536,11 +491,7 @@ class _CallBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0D47A1),
-            Color(0xFF1565C0),
-            Color(0xFF42A5F5),
-          ],
+          colors: [Color(0xFF0D47A1), Color(0xFF1565C0), Color(0xFF42A5F5)],
         ),
       ),
       child: Stack(
@@ -548,18 +499,12 @@ class _CallBackground extends StatelessWidget {
           Positioned(
             top: -140,
             right: -100,
-            child: _BlurCircle(
-              size: 280,
-              color: Color(0xFFFFFFFF),
-            ),
+            child: _BlurCircle(size: 280, color: Color(0xFFFFFFFF)),
           ),
           Positioned(
             bottom: -160,
             left: -120,
-            child: _BlurCircle(
-              size: 320,
-              color: Color(0xFFFFFFFF),
-            ),
+            child: _BlurCircle(size: 320, color: Color(0xFFFFFFFF)),
           ),
         ],
       ),
@@ -571,10 +516,7 @@ class _BlurCircle extends StatelessWidget {
   final double size;
   final Color color;
 
-  const _BlurCircle({
-    required this.size,
-    required this.color,
-  });
+  const _BlurCircle({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -588,148 +530,6 @@ class _BlurCircle extends StatelessWidget {
             color: color.withValues(alpha: 0.14),
             shape: BoxShape.circle,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CallDebugButton extends StatelessWidget {
-  final List<String> logs;
-  final VoidCallback onCopy;
-  final VoidCallback onClear;
-
-  const _CallDebugButton({
-    required this.logs,
-    required this.onCopy,
-    required this.onClear,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black.withValues(alpha: 0.24),
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () {
-          showModalBottomSheet<void>(
-            context: context,
-            backgroundColor: Colors.white,
-            isScrollControlled: true,
-            builder: (context) {
-              return _CallDebugSheet(
-                logs: logs,
-                onCopy: onCopy,
-                onClear: onClear,
-              );
-            },
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.bug_report_rounded,
-                color: Colors.white,
-                size: 17,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                logs.length.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CallDebugSheet extends StatelessWidget {
-  final List<String> logs;
-  final VoidCallback onCopy;
-  final VoidCallback onClear;
-
-  const _CallDebugSheet({
-    required this.logs,
-    required this.onCopy,
-    required this.onClear,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.72,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 12, 10),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Call debug logs',
-                      style: TextStyle(
-                        color: Color(0xFF102033),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: onClear,
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Clear'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: onCopy,
-                    icon: const Icon(Icons.copy_rounded, size: 17),
-                    label: const Text('Copy'),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: logs.isEmpty
-                  ? const Center(
-                child: Text(
-                  'No call logs yet.',
-                  style: TextStyle(
-                    color: Color(0xFF6B7A90),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(14),
-                itemCount: logs.length,
-                itemBuilder: (context, index) {
-                  return SelectableText(
-                    logs[index],
-                    style: const TextStyle(
-                      color: Color(0xFF102033),
-                      fontSize: 12,
-                      height: 1.35,
-                      fontFamily: 'monospace',
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );
