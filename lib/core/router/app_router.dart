@@ -11,6 +11,7 @@ import '../../features/conversations/presentation/screens/conversation_details_s
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/conversations/presentation/screens/conversations_screen.dart';
 import '../../features/messages/presentation/screens/message_screen.dart';
+import '../../features/calls/presentation/screens/audio_call_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -87,6 +88,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
 
           return ConversationDetailsScreen(conversationId: conversationId);
+        },
+      ),
+      GoRoute(
+        path: AudioCallScreen.routePath,
+        builder: (context, state) {
+          return const AudioCallScreen();
         },
       ),
     ],

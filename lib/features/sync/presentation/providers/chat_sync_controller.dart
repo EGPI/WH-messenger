@@ -220,6 +220,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       body: event.messageCreatedBody,
       serverReceivedAt: event.messageCreatedServerReceivedAt,
       incrementUnread: shouldIncrementUnread,
+      resetUnread: isOpenConversation,
     );
 
     if (!insertedNewMessage) return;
@@ -513,7 +514,10 @@ class ChatSyncController extends Notifier<ChatSyncState> {
   }) async {
     final payload = event.payload;
 
-    final readByUserId = _parseInt(payload['read_by_user_id']);
+    final readByUserId =
+        _parseInt(payload['read_by_user_id']) ??
+            _parseInt(payload['reader_id']) ??
+            _parseInt(payload['user_id']);
 
     // Important:
     // If I am the user who opened/read the conversation, this event should NOT
@@ -529,13 +533,6 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     final lastReadMessageId =
         _parseInt(payload['last_read_message_id']) ?? event.messageId;
-
-    final markedReadCount = _parseInt(payload['marked_read_count']) ?? 0;
-
-    // If backend says no receipts changed, do not update message ticks.
-    if (markedReadCount <= 0) {
-      return;
-    }
 
     final readAt =
         _parseDateTime(payload['read_at']) ??

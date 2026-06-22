@@ -9,6 +9,7 @@ class RealtimeConfig {
 
   static const bool useTls = true;
 
+  // Path prefix used by nginx to route to the Reverb server
   static const String _pathPrefix = '/messenger-api';
 
   static const String authEndpoint =
@@ -17,10 +18,9 @@ class RealtimeConfig {
   static String get websocketUrl {
     final scheme = useTls ? 'wss' : 'ws';
 
-    return '$scheme://$host$_pathPrefix/app/$appKey'
+    return '$scheme://$host:$port$_pathPrefix/app/$appKey'
         '?protocol=7'
         '&client=flutter'
-        '&version=1.0'
-        '&flash=false';
+        '&version=1.0';
   }
 }

@@ -763,6 +763,17 @@ class $LocalMessagesTable extends LocalMessages
     requiredDuringInsert: false,
     defaultValue: const Constant('text'),
   );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -860,6 +871,7 @@ class $LocalMessagesTable extends LocalMessages
     senderId,
     body,
     type,
+    payloadJson,
     status,
     clientMessageId,
     serverSequence,
@@ -924,6 +936,15 @@ class $LocalMessagesTable extends LocalMessages
       context.handle(
         _typeMeta,
         type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
       );
     }
     if (data.containsKey('status')) {
@@ -1024,6 +1045,10 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -1077,6 +1102,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
 
   /// For v1 this will be "text".
   final String type;
+  final String? payloadJson;
 
   /// pending, sent, delivered, read, failed
   final String status;
@@ -1103,6 +1129,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.senderId,
     required this.body,
     required this.type,
+    this.payloadJson,
     required this.status,
     this.clientMessageId,
     this.serverSequence,
@@ -1123,6 +1150,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     map['sender_id'] = Variable<int>(senderId);
     map['body'] = Variable<String>(body);
     map['type'] = Variable<String>(type);
+    if (!nullToAbsent || payloadJson != null) {
+      map['payload_json'] = Variable<String>(payloadJson);
+    }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || clientMessageId != null) {
       map['client_message_id'] = Variable<String>(clientMessageId);
@@ -1154,6 +1184,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       senderId: Value(senderId),
       body: Value(body),
       type: Value(type),
+      payloadJson: payloadJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadJson),
       status: Value(status),
       clientMessageId: clientMessageId == null && nullToAbsent
           ? const Value.absent()
@@ -1187,6 +1220,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       senderId: serializer.fromJson<int>(json['senderId']),
       body: serializer.fromJson<String>(json['body']),
       type: serializer.fromJson<String>(json['type']),
+      payloadJson: serializer.fromJson<String?>(json['payloadJson']),
       status: serializer.fromJson<String>(json['status']),
       clientMessageId: serializer.fromJson<String?>(json['clientMessageId']),
       serverSequence: serializer.fromJson<int?>(json['serverSequence']),
@@ -1209,6 +1243,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'senderId': serializer.toJson<int>(senderId),
       'body': serializer.toJson<String>(body),
       'type': serializer.toJson<String>(type),
+      'payloadJson': serializer.toJson<String?>(payloadJson),
       'status': serializer.toJson<String>(status),
       'clientMessageId': serializer.toJson<String?>(clientMessageId),
       'serverSequence': serializer.toJson<int?>(serverSequence),
@@ -1227,6 +1262,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     int? senderId,
     String? body,
     String? type,
+    Value<String?> payloadJson = const Value.absent(),
     String? status,
     Value<String?> clientMessageId = const Value.absent(),
     Value<int?> serverSequence = const Value.absent(),
@@ -1242,6 +1278,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     senderId: senderId ?? this.senderId,
     body: body ?? this.body,
     type: type ?? this.type,
+    payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
     status: status ?? this.status,
     clientMessageId: clientMessageId.present
         ? clientMessageId.value
@@ -1267,6 +1304,9 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       senderId: data.senderId.present ? data.senderId.value : this.senderId,
       body: data.body.present ? data.body.value : this.body,
       type: data.type.present ? data.type.value : this.type,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
       status: data.status.present ? data.status.value : this.status,
       clientMessageId: data.clientMessageId.present
           ? data.clientMessageId.value
@@ -1297,6 +1337,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('senderId: $senderId, ')
           ..write('body: $body, ')
           ..write('type: $type, ')
+          ..write('payloadJson: $payloadJson, ')
           ..write('status: $status, ')
           ..write('clientMessageId: $clientMessageId, ')
           ..write('serverSequence: $serverSequence, ')
@@ -1317,6 +1358,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     senderId,
     body,
     type,
+    payloadJson,
     status,
     clientMessageId,
     serverSequence,
@@ -1336,6 +1378,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.senderId == this.senderId &&
           other.body == this.body &&
           other.type == this.type &&
+          other.payloadJson == this.payloadJson &&
           other.status == this.status &&
           other.clientMessageId == this.clientMessageId &&
           other.serverSequence == this.serverSequence &&
@@ -1353,6 +1396,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<int> senderId;
   final Value<String> body;
   final Value<String> type;
+  final Value<String?> payloadJson;
   final Value<String> status;
   final Value<String?> clientMessageId;
   final Value<int?> serverSequence;
@@ -1368,6 +1412,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.senderId = const Value.absent(),
     this.body = const Value.absent(),
     this.type = const Value.absent(),
+    this.payloadJson = const Value.absent(),
     this.status = const Value.absent(),
     this.clientMessageId = const Value.absent(),
     this.serverSequence = const Value.absent(),
@@ -1384,6 +1429,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     required int senderId,
     required String body,
     this.type = const Value.absent(),
+    this.payloadJson = const Value.absent(),
     this.status = const Value.absent(),
     this.clientMessageId = const Value.absent(),
     this.serverSequence = const Value.absent(),
@@ -1403,6 +1449,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<int>? senderId,
     Expression<String>? body,
     Expression<String>? type,
+    Expression<String>? payloadJson,
     Expression<String>? status,
     Expression<String>? clientMessageId,
     Expression<int>? serverSequence,
@@ -1419,6 +1466,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (senderId != null) 'sender_id': senderId,
       if (body != null) 'body': body,
       if (type != null) 'type': type,
+      if (payloadJson != null) 'payload_json': payloadJson,
       if (status != null) 'status': status,
       if (clientMessageId != null) 'client_message_id': clientMessageId,
       if (serverSequence != null) 'server_sequence': serverSequence,
@@ -1437,6 +1485,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<int>? senderId,
     Value<String>? body,
     Value<String>? type,
+    Value<String?>? payloadJson,
     Value<String>? status,
     Value<String?>? clientMessageId,
     Value<int?>? serverSequence,
@@ -1453,6 +1502,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       senderId: senderId ?? this.senderId,
       body: body ?? this.body,
       type: type ?? this.type,
+      payloadJson: payloadJson ?? this.payloadJson,
       status: status ?? this.status,
       clientMessageId: clientMessageId ?? this.clientMessageId,
       serverSequence: serverSequence ?? this.serverSequence,
@@ -1484,6 +1534,9 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -1521,6 +1574,7 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('senderId: $senderId, ')
           ..write('body: $body, ')
           ..write('type: $type, ')
+          ..write('payloadJson: $payloadJson, ')
           ..write('status: $status, ')
           ..write('clientMessageId: $clientMessageId, ')
           ..write('serverSequence: $serverSequence, ')
@@ -3728,6 +3782,7 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       required int senderId,
       required String body,
       Value<String> type,
+      Value<String?> payloadJson,
       Value<String> status,
       Value<String?> clientMessageId,
       Value<int?> serverSequence,
@@ -3745,6 +3800,7 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<int> senderId,
       Value<String> body,
       Value<String> type,
+      Value<String?> payloadJson,
       Value<String> status,
       Value<String?> clientMessageId,
       Value<int?> serverSequence,
@@ -3791,6 +3847,11 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
     column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3874,6 +3935,11 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -3943,6 +4009,11 @@ class $$LocalMessagesTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -4016,6 +4087,7 @@ class $$LocalMessagesTableTableManager
                 Value<int> senderId = const Value.absent(),
                 Value<String> body = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> clientMessageId = const Value.absent(),
                 Value<int?> serverSequence = const Value.absent(),
@@ -4031,6 +4103,7 @@ class $$LocalMessagesTableTableManager
                 senderId: senderId,
                 body: body,
                 type: type,
+                payloadJson: payloadJson,
                 status: status,
                 clientMessageId: clientMessageId,
                 serverSequence: serverSequence,
@@ -4048,6 +4121,7 @@ class $$LocalMessagesTableTableManager
                 required int senderId,
                 required String body,
                 Value<String> type = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> clientMessageId = const Value.absent(),
                 Value<int?> serverSequence = const Value.absent(),
@@ -4063,6 +4137,7 @@ class $$LocalMessagesTableTableManager
                 senderId: senderId,
                 body: body,
                 type: type,
+                payloadJson: payloadJson,
                 status: status,
                 clientMessageId: clientMessageId,
                 serverSequence: serverSequence,

@@ -14,6 +14,8 @@ import '../providers/outbox_retry_worker.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/message_input_bar.dart';
 import '../widgets/older_messages_loader.dart';
+import '../../../calls/presentation/providers/call_controller.dart';
+import '../../../calls/presentation/screens/audio_call_screen.dart';
 
 class MessageScreen extends ConsumerStatefulWidget {
   final int conversationId;
@@ -159,6 +161,28 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     });
   }
 
+  Future<void> _startAudioCall() async {
+    final call = await ref
+        .read(callControllerProvider.notifier)
+        .startAudioCall(conversationId: widget.conversationId);
+
+    if (!mounted) return;
+
+    if (call == null) {
+      final errorMessage = ref.read(callControllerProvider).errorMessage;
+
+      if (errorMessage != null && errorMessage.trim().isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+
+      return;
+    }
+
+    context.push(AudioCallScreen.routePath);
+  }
+
   void _closeConversationAndGoBack() {
     _clearOpenConversationNow();
 
@@ -192,6 +216,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
     final conversationAsync =
     ref.watch(localConversationProvider(widget.conversationId));
+    final callState = ref.watch(callControllerProvider);
 
     return PopScope(
       canPop: true,
@@ -254,6 +279,34 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
               );
             },
           ),
+          actions: [
+            conversationAsync.maybeWhen(
+              data: (conversation) {
+                final type = conversation?.type.trim().toLowerCase();
+
+                if (type != 'direct') {
+                  return const SizedBox.shrink();
+                }
+
+                final isDisabled = callState.hasActiveCall || callState.isBusy;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    tooltip: 'Audio call',
+                    onPressed: isDisabled ? null : _startAudioCall,
+                    icon: Icon(
+                      Icons.call_rounded,
+                      color: isDisabled
+                          ? const Color(0xFF8A98AA)
+                          : Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
         ),
         body: Stack(
           children: [

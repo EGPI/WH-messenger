@@ -16,6 +16,8 @@ class LocalMessages extends Table {
   /// For v1 this will be "text".
   TextColumn get type => text().withDefault(const Constant('text'))();
 
+  TextColumn get payloadJson => text().nullable()();
+
   /// pending, sent, delivered, read, failed
   TextColumn get status => text().withDefault(const Constant('pending'))();
 

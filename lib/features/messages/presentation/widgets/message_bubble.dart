@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'call_message_bubble.dart';
 import '../../../../core/database/app_database.dart';
 import 'message_status_icon.dart';
 
@@ -23,6 +23,12 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     if (message.type == 'system') {
       return _SystemMessageRow(message: message);
+    }
+    if (message.type == 'call') {
+      return CallMessageBubble(
+        message: message,
+        isMine: isMine,
+      );
     }
 
     final colorScheme = Theme.of(context).colorScheme;

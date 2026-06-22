@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-
+import 'dart:convert';
 import '../../../core/database/app_database.dart';
 import 'sync_models.dart';
 
@@ -33,6 +33,9 @@ extension SyncMessageCreatedMapper on SyncEventModel {
       senderId: Value(senderId),
       body: Value(payload['body']?.toString() ?? ''),
       type: Value(payload['type']?.toString() ?? 'text'),
+      payloadJson: Value(
+        _payloadJson(payload['payload']),
+      ),
       status: const Value('sent'),
       clientMessageId: Value(payload['client_message_id']?.toString()),
       serverSequence: Value(messageId),
@@ -92,4 +95,12 @@ DateTime? _parseDateTime(dynamic value) {
   if (text.isEmpty) return null;
 
   return DateTime.tryParse(text);
+}
+
+String? _payloadJson(dynamic value) {
+  if (value == null) return null;
+
+  if (value is Map && value.isEmpty) return null;
+
+  return jsonEncode(value);
 }

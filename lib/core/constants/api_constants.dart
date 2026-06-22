@@ -35,4 +35,28 @@ class ApiConstants {
   }) {
     return '/conversations/$conversationId/admins/$userId';
   }
+
+  static String startAudioCall(int conversationId) {
+    return '/conversations/$conversationId/calls/audio/start';
+  }
+
+  static String acceptCall(int callId) {
+    return '/calls/$callId/accept';
+  }
+
+  static String rejectCall(int callId) {
+    return '/calls/$callId/reject';
+  }
+
+  static String endCall(int callId) {
+    return '/calls/$callId/end';
+  }
+
+  static String signalCall(int callId) {
+    return '/calls/$callId/signal';
+  }
+
+  static String callDetails(int callId) {
+    return '/calls/$callId';
+  }
 }
