@@ -4,7 +4,13 @@ class ApiConstants {
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String logout = '/auth/logout';
+  static const String deleteAccount = '/auth/account';
   static const String me = '/auth/me';
+  static const String devices = '/devices';
+
+  static String device(String deviceUuid) {
+    return '/devices/$deviceUuid';
+  }
 
   static const String usersSearch = '/users/search';
 

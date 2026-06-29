@@ -16,10 +16,7 @@ class AuthApi {
   }) async {
     final response = await _dio.post(
       ApiConstants.login,
-      data: {
-        'email': email,
-        'password': password,
-      },
+      data: {'email': email, 'password': password},
     );
 
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
@@ -32,11 +29,7 @@ class AuthApi {
   }) async {
     final response = await _dio.post(
       ApiConstants.register,
-      data: {
-        'name': name,
-        'email': email,
-        'password': password,
-      },
+      data: {'name': name, 'email': email, 'password': password},
     );
 
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
@@ -52,6 +45,10 @@ class AuthApi {
 
   Future<void> logout() async {
     await _dio.post(ApiConstants.logout);
+  }
+
+  Future<void> deleteAccount() async {
+    await _dio.delete(ApiConstants.deleteAccount);
   }
 }
 

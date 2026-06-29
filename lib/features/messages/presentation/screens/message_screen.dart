@@ -20,10 +20,7 @@ import '../../../calls/presentation/screens/audio_call_screen.dart';
 class MessageScreen extends ConsumerStatefulWidget {
   final int conversationId;
 
-  const MessageScreen({
-    super.key,
-    required this.conversationId,
-  });
+  const MessageScreen({super.key, required this.conversationId});
 
   static const routePath = '/conversations/:conversationId';
 
@@ -68,9 +65,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     return _scrollController.position.pixels <= 120;
   }
 
-  void _scrollToBottom({
-    bool animated = true,
-  }) {
+  void _scrollToBottom({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
 
@@ -98,6 +93,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
         .read(messageScreenControllerProvider(widget.conversationId).notifier)
         .openConversation();
   }
+
   void _warmUpSenderNamesForGroupLike(String? type) {
     if (_didWarmUpSenderNames) return;
 
@@ -126,8 +122,10 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
 
       await ref
           .read(
-        conversationDetailsControllerProvider(widget.conversationId).notifier,
-      )
+            conversationDetailsControllerProvider(
+              widget.conversationId,
+            ).notifier,
+          )
           .loadDetails(refresh: true);
     });
   }
@@ -172,9 +170,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
       final errorMessage = ref.read(callControllerProvider).errorMessage;
 
       if (errorMessage != null && errorMessage.trim().isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
 
       return;
@@ -198,25 +196,26 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     ref.watch(outboxConnectivityBootstrapProvider);
     ref.watch(realtimeBootstrapProvider);
 
-    ref.listen(
-      localMessagesProvider(widget.conversationId),
-          (previous, next) {
-        next.whenData((messages) {
-          final hadNewMessage = messages.length > _lastMessageCount;
-          final shouldStayAtBottom = _lastMessageCount == 0 || _isNearBottom();
+    ref.listen(localMessagesProvider(widget.conversationId), (previous, next) {
+      next.whenData((messages) {
+        final hadNewMessage = messages.length > _lastMessageCount;
+        final shouldStayAtBottom = _lastMessageCount == 0 || _isNearBottom();
 
-          _lastMessageCount = messages.length;
+        _lastMessageCount = messages.length;
 
-          if (!hadNewMessage || !shouldStayAtBottom) return;
+        if (!hadNewMessage || !shouldStayAtBottom) return;
 
-          _scrollToBottom(animated: _lastMessageCount > 1);
-        });
-      },
+        _scrollToBottom(animated: _lastMessageCount > 1);
+      });
+    });
+
+    final conversationAsync = ref.watch(
+      localConversationProvider(widget.conversationId),
     );
-
-    final conversationAsync =
-    ref.watch(localConversationProvider(widget.conversationId));
     final callState = ref.watch(callControllerProvider);
+    final directPeerStatus = ref.watch(
+      directChatPeerStatusProvider(widget.conversationId),
+    );
 
     return PopScope(
       canPop: true,
@@ -260,7 +259,9 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                 subtitle: _conversationSubtitle(type),
                 type: type,
                 onTap: () {
-                  context.push('/conversations/${widget.conversationId}/details');
+                  context.push(
+                    '/conversations/${widget.conversationId}/details',
+                  );
                 },
               );
             },
@@ -288,13 +289,32 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                   return const SizedBox.shrink();
                 }
 
-                final isDisabled = callState.hasActiveCall || callState.isBusy;
+                final isPeerDeleted =
+                    isDeletedAccountName(conversation?.title) ||
+                    (directPeerStatus.valueOrNull?.isDeletedOrInactive ??
+                        false);
+                final isDisabled =
+                    callState.hasActiveCall ||
+                    callState.isBusy ||
+                    isPeerDeleted;
 
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: IconButton(
-                    tooltip: 'Audio call',
-                    onPressed: isDisabled ? null : _startAudioCall,
+                    tooltip: isPeerDeleted
+                        ? deletedAccountBlockedReason
+                        : 'Audio call',
+                    onPressed: callState.hasActiveCall || callState.isBusy
+                        ? null
+                        : isPeerDeleted
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(deletedAccountBlockedReason),
+                              ),
+                            );
+                          }
+                        : _startAudioCall,
                     icon: Icon(
                       Icons.call_rounded,
                       color: isDisabled
@@ -320,9 +340,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
                       scrollController: _scrollController,
                     ),
                   ),
-                  MessageInputBar(
-                    conversationId: widget.conversationId,
-                  ),
+                  MessageInputBar(conversationId: widget.conversationId),
                 ],
               ),
             ),
@@ -332,10 +350,7 @@ class _MessageScreenState extends ConsumerState<MessageScreen> {
     );
   }
 
-  String _conversationTitle({
-    required String? type,
-    required String? title,
-  }) {
+  String _conversationTitle({required String? type, required String? title}) {
     final trimmed = title?.trim();
 
     if (trimmed != null && trimmed.isNotEmpty) {
@@ -375,82 +390,72 @@ class _MessageAppBarTitle extends StatelessWidget {
     final icon = _iconForType(type);
 
     return Material(
-        color: Colors.transparent,
-        child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
-            child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 2,
-                  vertical: 4,
-                ),
-                child: Row(
-                  children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colorScheme.primary,
-                const Color(0xFF42A5F5),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.18),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 22,
-          ),
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: Row(
             children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xFF102033),
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.15,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [colorScheme.primary, const Color(0xFF42A5F5)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.18),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF102033),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.15,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF6B7A90),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              if (subtitle.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF6B7A90),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
-      ],
-    )
-            ),
-        )
+      ),
     );
   }
 
@@ -475,32 +480,30 @@ class _MessagesList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final messagesAsync = ref.watch(localMessagesProvider(conversationId));
 
-    final controllerState =
-    ref.watch(messageScreenControllerProvider(conversationId));
+    final controllerState = ref.watch(
+      messageScreenControllerProvider(conversationId),
+    );
 
     final currentUserId = ref.watch(
       authControllerProvider.select((state) => state.user?.id),
     );
-    final conversationType = ref.watch(
-      localConversationProvider(conversationId),
-    ).maybeWhen(
-      data: (conversation) => conversation?.type,
-      orElse: () => null,
-    );
+    final conversationType = ref
+        .watch(localConversationProvider(conversationId))
+        .maybeWhen(
+          data: (conversation) => conversation?.type,
+          orElse: () => null,
+        );
 
     final shouldShowSenderNames =
         conversationType == 'group' || conversationType == 'announcement';
 
-    final senderNames = ref.watch(
-      messageSenderNamesProvider(conversationId),
-    ).maybeWhen(
-      data: (names) => names,
-      orElse: () => const <int, String>{},
-    );
+    final senderNames = ref
+        .watch(messageSenderNamesProvider(conversationId))
+        .maybeWhen(data: (names) => names, orElse: () => const <int, String>{});
     final canSendMessages = ref.watch(
-      messageSendPermissionProvider(conversationId).select(
-            (permission) => permission.canSend,
-      ),
+      messageSendPermissionProvider(
+        conversationId,
+      ).select((permission) => permission.canSend),
     );
 
     return messagesAsync.when(
@@ -517,10 +520,7 @@ class _MessagesList extends ConsumerWidget {
           controller: scrollController,
           reverse: true,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
-          padding: const EdgeInsets.only(
-            top: 12,
-            bottom: 14,
-          ),
+          padding: const EdgeInsets.only(top: 12, bottom: 14),
           itemCount: messages.length + 1,
           itemBuilder: (context, index) {
             if (index == messages.length) {
@@ -546,12 +546,12 @@ class _MessagesList extends ConsumerWidget {
               onRetry: !canSendMessages || message.clientMessageId == null
                   ? null
                   : () {
-                ref
-                    .read(outboxRetryWorkerProvider.notifier)
-                    .retryFailedMessage(
-                  clientMessageId: message.clientMessageId!,
-                );
-              },
+                      ref
+                          .read(outboxRetryWorkerProvider.notifier)
+                          .retryFailedMessage(
+                            clientMessageId: message.clientMessageId!,
+                          );
+                    },
             );
           },
         );
@@ -597,9 +597,7 @@ class _MessagesLoadingView extends StatelessWidget {
                 bottomLeft: Radius.circular(isMine ? 22 : 6),
                 bottomRight: Radius.circular(isMine ? 6 : 22),
               ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.9),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         );
@@ -623,9 +621,7 @@ class _EmptyMessagesView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.84),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.94),
-            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.94)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.045),
@@ -740,11 +736,7 @@ class _MessageBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFEAF4FF),
-            Color(0xFFF8FBFF),
-            Color(0xFFEFF6FF),
-          ],
+          colors: [Color(0xFFEAF4FF), Color(0xFFF8FBFF), Color(0xFFEFF6FF)],
         ),
       ),
       child: Stack(
@@ -752,18 +744,12 @@ class _MessageBackground extends StatelessWidget {
           Positioned(
             top: -130,
             right: -85,
-            child: _BlurCircle(
-              size: 245,
-              color: Color(0xFF90CAF9),
-            ),
+            child: _BlurCircle(size: 245, color: Color(0xFF90CAF9)),
           ),
           Positioned(
             bottom: -150,
             left: -95,
-            child: _BlurCircle(
-              size: 270,
-              color: Color(0xFF1565C0),
-            ),
+            child: _BlurCircle(size: 270, color: Color(0xFF1565C0)),
           ),
         ],
       ),
@@ -775,10 +761,7 @@ class _BlurCircle extends StatelessWidget {
   final double size;
   final Color color;
 
-  const _BlurCircle({
-    required this.size,
-    required this.color,
-  });
+  const _BlurCircle({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {

@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/network/dio_provider.dart';
+import '../../../notifications/data/push_notification_service.dart';
 import '../../data/auth_api.dart';
 import 'auth_state.dart';
 
-final authControllerProvider =
-NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);
 
 class AuthController extends Notifier<AuthState> {
   late final AuthApi _authApi;
@@ -39,6 +44,7 @@ class AuthController extends Notifier<AuthState> {
       await _storage.saveUser(freshUser);
 
       state = AuthState.authenticated(freshUser);
+      unawaited(ref.read(pushNotificationServiceProvider).start());
     } catch (_) {
       await _storage.clearToken();
 
@@ -46,14 +52,8 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
-    state = state.copyWith(
-      isSubmitting: true,
-      clearError: true,
-    );
+  Future<bool> login({required String email, required String password}) async {
+    state = state.copyWith(isSubmitting: true, clearError: true);
 
     try {
       final result = await _authApi.login(
@@ -61,12 +61,10 @@ class AuthController extends Notifier<AuthState> {
         password: password,
       );
 
-      await _storage.saveSession(
-        token: result.token,
-        user: result.user,
-      );
+      await _storage.saveSession(token: result.token, user: result.user);
 
       state = AuthState.authenticated(result.user);
+      unawaited(ref.read(pushNotificationServiceProvider).start());
       return true;
     } catch (error) {
       state = state.copyWith(
@@ -82,10 +80,7 @@ class AuthController extends Notifier<AuthState> {
     required String email,
     required String password,
   }) async {
-    state = state.copyWith(
-      isSubmitting: true,
-      clearError: true,
-    );
+    state = state.copyWith(isSubmitting: true, clearError: true);
 
     try {
       final result = await _authApi.register(
@@ -94,12 +89,10 @@ class AuthController extends Notifier<AuthState> {
         password: password,
       );
 
-      await _storage.saveSession(
-        token: result.token,
-        user: result.user,
-      );
+      await _storage.saveSession(token: result.token, user: result.user);
 
       state = AuthState.authenticated(result.user);
+      unawaited(ref.read(pushNotificationServiceProvider).start());
       return true;
     } catch (error) {
       state = state.copyWith(
@@ -111,13 +104,42 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    await ref.read(pushNotificationServiceProvider).revokeCurrentDevice();
+    await ref.read(pushNotificationServiceProvider).stop();
+
     try {
       await _authApi.logout();
     } catch (_) {
       // Even if server logout fails, clear local token.
     }
 
+    await _clearLocalSession(clearChatCache: false);
+  }
+
+  Future<bool> deleteAccount() async {
+    state = state.copyWith(isSubmitting: true, clearError: true);
+
+    try {
+      await _authApi.deleteAccount();
+      await ref.read(pushNotificationServiceProvider).stop();
+      await _clearLocalSession(clearChatCache: true);
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _friendlyError(error),
+      );
+      return false;
+    }
+  }
+
+  Future<void> _clearLocalSession({required bool clearChatCache}) async {
     await _storage.clearToken();
+
+    if (clearChatCache) {
+      await ref.read(chatLocalDaoProvider).clearLocalChatCache();
+    }
+
     state = const AuthState.unauthenticated();
   }
 

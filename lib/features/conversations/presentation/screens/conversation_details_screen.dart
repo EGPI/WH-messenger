@@ -546,6 +546,7 @@ class _MembersSection extends StatelessWidget {
             _MemberTile(
               name: item.user.name,
               email: item.user.email,
+              isActive: item.user.isActive,
               role: item.participant.role,
               userId: item.user.id,
               isMe: item.user.id == currentUserId,
@@ -568,6 +569,7 @@ class _MemberTile extends StatelessWidget {
   final int userId;
   final String name;
   final String email;
+  final bool isActive;
   final String? role;
   final bool isMe;
   final bool canManageMembers;
@@ -580,6 +582,7 @@ class _MemberTile extends StatelessWidget {
     required this.userId,
     required this.name,
     required this.email,
+    required this.isActive,
     required this.role,
     required this.isMe,
     required this.canManageMembers,
@@ -592,7 +595,17 @@ class _MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final safeName = name.trim().isEmpty ? 'Unknown user' : name.trim();
+    final isDeletedUser = !isActive || name.trim() == 'Deleted User';
+    final safeName = isDeletedUser
+        ? 'Deleted User'
+        : name.trim().isEmpty
+            ? 'Unknown user'
+            : name.trim();
+    final safeEmail = isDeletedUser
+        ? ''
+        : email.trim().isEmpty
+            ? 'No email'
+            : email.trim();
     final initials = _initials(safeName);
 
     final normalizedRole = role?.trim().toLowerCase();
@@ -600,7 +613,7 @@ class _MemberTile extends StatelessWidget {
     final isAdmin = normalizedRole == 'admin';
     final isBusy = isRemoving || isPromoting;
 
-    final canShowActions = canManageMembers && !isMe && !isOwner;
+    final canShowActions = canManageMembers && !isMe && !isOwner && !isDeletedUser;
     final canPromote = canShowActions && !isAdmin;
 
     return Padding(
@@ -644,16 +657,17 @@ class _MemberTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7A90),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                if (safeEmail.isNotEmpty)
+                  Text(
+                    safeEmail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7A90),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
