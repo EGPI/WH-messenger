@@ -17,9 +17,7 @@ import '../../../conversations/data/conversation_mappers.dart';
 import 'chat_sync_state.dart';
 
 final chatSyncControllerProvider =
-NotifierProvider<ChatSyncController, ChatSyncState>(
-  ChatSyncController.new,
-);
+    NotifierProvider<ChatSyncController, ChatSyncState>(ChatSyncController.new);
 
 class ChatSyncController extends Notifier<ChatSyncState> {
   late final SyncApi _syncApi;
@@ -37,9 +35,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
     return const ChatSyncState.initial();
   }
 
-  Future<void> syncNow({
-    bool flushOutboxAfter = true,
-  }) async {
+  Future<void> syncNow({bool flushOutboxAfter = true}) async {
     if (state.isSyncing) return;
 
     final currentUserId = ref.read(
@@ -48,10 +44,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     if (currentUserId == null) return;
 
-    state = state.copyWith(
-      isSyncing: true,
-      clearError: true,
-    );
+    state = state.copyWith(isSyncing: true, clearError: true);
 
     try {
       var afterEventId = await _dao.getLastEventId();
@@ -70,10 +63,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
             continue;
           }
 
-          await _applyEvent(
-            event: event,
-            currentUserId: currentUserId,
-          );
+          await _applyEvent(event: event, currentUserId: currentUserId);
 
           await _dao.setLastEventId(event.id);
           afterEventId = event.id;
@@ -88,9 +78,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       }
 
       if (flushOutboxAfter) {
-        await ref
-            .read(outboxRetryWorkerProvider.notifier)
-            .flushPendingOutbox();
+        await ref.read(outboxRetryWorkerProvider.notifier).flushPendingOutbox();
       }
 
       state = state.copyWith(
@@ -111,10 +99,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
   }) async {
     switch (event.eventType) {
       case 'message.created':
-        await _applyMessageCreated(
-          event: event,
-          currentUserId: currentUserId,
-        );
+        await _applyMessageCreated(event: event, currentUserId: currentUserId);
         return;
 
       case 'conversation.updated':
@@ -126,10 +111,7 @@ class ChatSyncController extends Notifier<ChatSyncState> {
         return;
 
       case 'message.read':
-        await _applyMessageRead(
-          event: event,
-          currentUserId: currentUserId,
-        );
+        await _applyMessageRead(event: event, currentUserId: currentUserId);
         return;
 
       case 'participant.added':
@@ -168,16 +150,11 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       return;
     }
 
-    await _applyEvent(
-      event: event,
-      currentUserId: currentUserId,
-    );
+    await _applyEvent(event: event, currentUserId: currentUserId);
 
     await _dao.setLastEventId(event.id);
 
-    state = state.copyWith(
-      lastAppliedEventId: event.id,
-    );
+    state = state.copyWith(lastAppliedEventId: event.id);
   }
 
   Future<void> _applyMessageCreated({
@@ -196,8 +173,9 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       return;
     }
 
-    final existingConversation =
-    await _dao.findConversationById(conversationId);
+    final existingConversation = await _dao.findConversationById(
+      conversationId,
+    );
 
     if (existingConversation == null) {
       await ref
@@ -228,17 +206,13 @@ class ChatSyncController extends Notifier<ChatSyncState> {
     if (isMine) return;
 
     if (isOpenConversation) {
-      await _messageApi.markConversationRead(
-        conversationId: conversationId,
-      );
+      await _messageApi.markConversationRead(conversationId: conversationId);
 
       await _dao.markConversationReadLocally(conversationId);
       return;
     }
 
-    await _messageApi.markMessageDelivered(
-      messageId: messageId,
-    );
+    await _messageApi.markMessageDelivered(messageId: messageId);
   }
 
   Future<void> _applyParticipantAdded({
@@ -273,9 +247,11 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       avatarUrl: payload['user_avatar_url']?.toString(),
       phone: null,
       isActive: true,
+      isDeleted: false,
       lastSeenAt: null,
       role: payload['role']?.toString() ?? 'member',
-      joinedAt: _parseDateTime(payload['joined_at']) ??
+      joinedAt:
+          _parseDateTime(payload['joined_at']) ??
           event.occurredAt ??
           event.createdAt,
       leftAt: null,
@@ -297,7 +273,8 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     if (conversationId == null || userId == null) return;
 
-    final leftAt = _parseDateTime(payload['left_at']) ??
+    final leftAt =
+        _parseDateTime(payload['left_at']) ??
         event.occurredAt ??
         event.createdAt ??
         DateTime.now();
@@ -350,6 +327,9 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       avatarUrl: existingUser?.avatarUrl,
       phone: existingUser?.phone,
       isActive: existingUser?.isActive ?? true,
+      isDeleted:
+          existingUser?.isActive == false ||
+          (existingUser?.name.trim() == 'Deleted User'),
       lastSeenAt: existingUser?.lastSeenAt,
       role: role,
       joinedAt: null,
@@ -382,19 +362,17 @@ class ChatSyncController extends Notifier<ChatSyncState> {
       participants: details.participants
           .map(
             (participant) => participant.toLocalParticipantCompanion(
-          fallbackConversationId: details.id,
-        ),
-      )
+              fallbackConversationId: details.id,
+            ),
+          )
           .toList(growable: false),
     );
   }
 
   Future<void> _saveParticipant(
-      ConversationParticipantModel participant,
-      ) async {
-    await _dao.upsertUser(
-      participant.toLocalUserCompanion(),
-    );
+    ConversationParticipantModel participant,
+  ) async {
+    await _dao.upsertUser(participant.toLocalUserCompanion());
 
     await _dao.upsertParticipant(
       participant.toLocalParticipantCompanion(
@@ -455,8 +433,8 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     final conversationId =
         _parseInt(payload['conversation_id']) ??
-            _parseInt(payload['id']) ??
-            event.conversationId;
+        _parseInt(payload['id']) ??
+        event.conversationId;
 
     if (conversationId == null) return;
 
@@ -491,14 +469,13 @@ class ChatSyncController extends Notifier<ChatSyncState> {
   Future<void> _applyMessageDelivered(SyncEventModel event) async {
     final payload = event.payload;
 
-    final messageId =
-        _parseInt(payload['message_id']) ?? event.messageId;
+    final messageId = _parseInt(payload['message_id']) ?? event.messageId;
 
     final deliveredAt =
         _parseDateTime(payload['delivered_at']) ??
-            event.occurredAt ??
-            event.createdAt ??
-            DateTime.now();
+        event.occurredAt ??
+        event.createdAt ??
+        DateTime.now();
 
     if (messageId == null) return;
 
@@ -516,8 +493,8 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     final readByUserId =
         _parseInt(payload['read_by_user_id']) ??
-            _parseInt(payload['reader_id']) ??
-            _parseInt(payload['user_id']);
+        _parseInt(payload['reader_id']) ??
+        _parseInt(payload['user_id']);
 
     // Important:
     // If I am the user who opened/read the conversation, this event should NOT
@@ -536,9 +513,9 @@ class ChatSyncController extends Notifier<ChatSyncState> {
 
     final readAt =
         _parseDateTime(payload['read_at']) ??
-            event.occurredAt ??
-            event.createdAt ??
-            DateTime.now();
+        event.occurredAt ??
+        event.createdAt ??
+        DateTime.now();
 
     if (conversationId == null || lastReadMessageId == null) return;
 

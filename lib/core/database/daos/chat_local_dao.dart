@@ -23,33 +23,44 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     with _$ChatLocalDaoMixin {
   ChatLocalDao(super.db);
 
+  Future<void> clearLocalChatCache() async {
+    await transaction(() async {
+      await delete(localOutbox).go();
+      await delete(localMessages).go();
+      await delete(localConversationParticipants).go();
+      await delete(localUsers).go();
+      await delete(localConversations).go();
+      await delete(localSyncState).go();
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Conversations
   // ---------------------------------------------------------------------------
 
   Future<void> removeConversationFromList(int conversationId) async {
     await transaction(() async {
-      await (delete(localConversations)..where((t) => t.id.equals(conversationId)))
-          .go();
+      await (delete(
+        localConversations,
+      )..where((t) => t.id.equals(conversationId))).go();
 
-      await (delete(localConversationParticipants)
-        ..where((t) => t.conversationId.equals(conversationId)))
-          .go();
+      await (delete(
+        localConversationParticipants,
+      )..where((t) => t.conversationId.equals(conversationId))).go();
     });
   }
 
   Stream<List<LocalConversation>> watchConversations() {
-    return (select(localConversations)
-      ..orderBy([
-            (t) => OrderingTerm(
-          expression: t.lastMessageAt,
-          mode: OrderingMode.desc,
-        ),
-            (t) => OrderingTerm(
-          expression: t.locallyUpdatedAt,
-          mode: OrderingMode.desc,
-        ),
-      ]))
+    return (select(localConversations)..orderBy([
+          (t) => OrderingTerm(
+            expression: t.lastMessageAt,
+            mode: OrderingMode.desc,
+          ),
+          (t) => OrderingTerm(
+            expression: t.locallyUpdatedAt,
+            mode: OrderingMode.desc,
+          ),
+        ]))
         .watch();
   }
 
@@ -58,13 +69,10 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> upsertConversations(
-      List<LocalConversationsCompanion> conversations,
-      ) async {
+    List<LocalConversationsCompanion> conversations,
+  ) async {
     await batch((batch) {
-      batch.insertAllOnConflictUpdate(
-        localConversations,
-        conversations,
-      );
+      batch.insertAllOnConflictUpdate(localConversations, conversations);
     });
   }
 
@@ -72,9 +80,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required int conversationId,
     required int unreadCount,
   }) {
-    return (update(localConversations)
-      ..where((t) => t.id.equals(conversationId)))
-        .write(
+    return (update(
+      localConversations,
+    )..where((t) => t.id.equals(conversationId))).write(
       LocalConversationsCompanion(
         unreadCount: Value(unreadCount),
         locallyUpdatedAt: Value(DateTime.now()),
@@ -83,9 +91,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> markConversationReadLocally(int conversationId) {
-    return (update(localConversations)
-      ..where((t) => t.id.equals(conversationId)))
-        .write(
+    return (update(
+      localConversations,
+    )..where((t) => t.id.equals(conversationId))).write(
       LocalConversationsCompanion(
         unreadCount: const Value(0),
         locallyUpdatedAt: Value(DateTime.now()),
@@ -93,36 +101,28 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-
-
   // ---------------------------------------------------------------------------
   // Messages
   // ---------------------------------------------------------------------------
 
   Stream<List<LocalMessage>> watchMessages(int conversationId) {
     return (select(localMessages)
-      ..where((t) => t.conversationId.equals(conversationId))
-      ..orderBy([
-        // Server-confirmed messages first.
-        // Pending local messages have no serverId, so they go after server messages.
+          ..where((t) => t.conversationId.equals(conversationId))
+          ..orderBy([
+            // Server-confirmed messages first.
+            // Pending local messages have no serverId, so they go after server messages.
             (t) => OrderingTerm(
-          expression: t.serverId.isNull(),
-          mode: OrderingMode.asc,
-        ),
+              expression: t.serverId.isNull(),
+              mode: OrderingMode.asc,
+            ),
 
-        // Main ordering source from server.
-            (t) => OrderingTerm(
-          expression: t.serverId,
-          mode: OrderingMode.asc,
-        ),
+            // Main ordering source from server.
+            (t) => OrderingTerm(expression: t.serverId, mode: OrderingMode.asc),
 
-        // Stable local fallback only for pending local messages.
-        // This is not phone-clock based.
-            (t) => OrderingTerm(
-          expression: t.localId,
-          mode: OrderingMode.asc,
-        ),
-      ]))
+            // Stable local fallback only for pending local messages.
+            // This is not phone-clock based.
+            (t) => OrderingTerm(expression: t.localId, mode: OrderingMode.asc),
+          ]))
         .watch();
   }
 
@@ -137,8 +137,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     // Never downgrade read back to delivered.
     if (message.status == 'read') return;
 
-    await (update(localMessages)..where((t) => t.serverId.equals(serverId)))
-        .write(
+    await (update(
+      localMessages,
+    )..where((t) => t.serverId.equals(serverId))).write(
       LocalMessagesCompanion(
         status: const Value('delivered'),
         deliveredAt: Value(deliveredAt),
@@ -151,8 +152,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required int serverId,
     required DateTime readAt,
   }) {
-    return (update(localMessages)..where((t) => t.serverId.equals(serverId)))
-        .write(
+    return (update(
+      localMessages,
+    )..where((t) => t.serverId.equals(serverId))).write(
       LocalMessagesCompanion(
         status: const Value('read'),
         readAt: Value(readAt),
@@ -167,69 +169,68 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required int lastReadMessageId,
     required DateTime readAt,
   }) {
-    return (update(localMessages)
-      ..where(
-            (t) =>
-        t.conversationId.equals(conversationId) &
-        t.senderId.equals(currentUserId) &
-        t.serverId.isNotNull() &
-        t.serverId.isSmallerOrEqualValue(lastReadMessageId),
-      ))
+    return (update(localMessages)..where(
+          (t) =>
+              t.conversationId.equals(conversationId) &
+              t.senderId.equals(currentUserId) &
+              t.serverId.isNotNull() &
+              t.serverId.isSmallerOrEqualValue(lastReadMessageId),
+        ))
         .write(
-      LocalMessagesCompanion(
-        status: const Value('read'),
-        readAt: Value(readAt),
-        locallyUpdatedAt: Value(DateTime.now()),
-      ),
-    );
+          LocalMessagesCompanion(
+            status: const Value('read'),
+            readAt: Value(readAt),
+            locallyUpdatedAt: Value(DateTime.now()),
+          ),
+        );
   }
 
   Future<int?> getOldestServerMessageId(int conversationId) async {
-    final row = await (select(localMessages)
-      ..where(
-            (t) =>
-        t.conversationId.equals(conversationId) &
-        t.serverId.isNotNull(),
-      )
-      ..orderBy([
-            (t) => OrderingTerm(
-          expression: t.serverId,
-          mode: OrderingMode.asc,
-        ),
-      ])
-      ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (select(localMessages)
+              ..where(
+                (t) =>
+                    t.conversationId.equals(conversationId) &
+                    t.serverId.isNotNull(),
+              )
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.serverId,
+                  mode: OrderingMode.asc,
+                ),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
 
     return row?.serverId;
   }
 
   Future<void> upsertServerMessages(
-      List<LocalMessagesCompanion> messages,
-      ) async {
+    List<LocalMessagesCompanion> messages,
+  ) async {
     if (messages.isEmpty) return;
 
     await batch((batch) {
-      batch.insertAllOnConflictUpdate(
-        localMessages,
-        messages,
-      );
+      batch.insertAllOnConflictUpdate(localMessages, messages);
     });
   }
 
   Future<void> upsertServerMessageSafely(
-      LocalMessagesCompanion message, {
-        int? serverId,
-        String? clientMessageId,
-      }) async {
+    LocalMessagesCompanion message, {
+    int? serverId,
+    String? clientMessageId,
+  }) async {
     // 1. Prefer matching by client_message_id.
     // This replaces a local pending message with the server-confirmed message.
     if (clientMessageId != null && clientMessageId.isNotEmpty) {
-      final existingByClientMessageId =
-      await findMessageByClientMessageId(clientMessageId);
+      final existingByClientMessageId = await findMessageByClientMessageId(
+        clientMessageId,
+      );
 
       if (existingByClientMessageId != null) {
-        await (update(localMessages)
-          ..where((t) => t.localId.equals(existingByClientMessageId.localId)))
+        await (update(localMessages)..where(
+              (t) => t.localId.equals(existingByClientMessageId.localId),
+            ))
             .write(message);
         return;
       }
@@ -241,7 +242,7 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
 
       if (existingByServerId != null) {
         await (update(localMessages)
-          ..where((t) => t.localId.equals(existingByServerId.localId)))
+              ..where((t) => t.localId.equals(existingByServerId.localId)))
             .write(message);
         return;
       }
@@ -252,10 +253,10 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> upsertServerMessagesSafely(
-      List<LocalMessagesCompanion> messages, {
-        required List<int?> serverIds,
-        required List<String?> clientMessageIds,
-      }) async {
+    List<LocalMessagesCompanion> messages, {
+    required List<int?> serverIds,
+    required List<String?> clientMessageIds,
+  }) async {
     if (messages.isEmpty) return;
 
     await transaction(() async {
@@ -302,9 +303,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
 
       // Local-only optimistic conversation preview.
       // This makes the conversation list update immediately like WhatsApp/Telegram.
-      await (update(localConversations)
-        ..where((t) => t.id.equals(conversationId)))
-          .write(
+      await (update(
+        localConversations,
+      )..where((t) => t.id.equals(conversationId))).write(
         LocalConversationsCompanion(
           lastMessagePreview: Value(body),
           lastMessageSenderId: Value(senderId),
@@ -326,11 +327,13 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required DateTime serverReceivedAt,
   }) async {
     await transaction(() async {
-      final existingMessage = await findMessageByClientMessageId(clientMessageId);
+      final existingMessage = await findMessageByClientMessageId(
+        clientMessageId,
+      );
 
-      await (update(localMessages)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .write(
+      await (update(
+        localMessages,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
         LocalMessagesCompanion(
           serverId: Value(serverId),
           serverSequence: Value(serverSequence),
@@ -340,14 +343,14 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
         ),
       );
 
-      await (delete(localOutbox)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .go();
+      await (delete(
+        localOutbox,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).go();
 
       if (existingMessage != null) {
-        await (update(localConversations)
-          ..where((t) => t.id.equals(existingMessage.conversationId)))
-            .write(
+        await (update(
+          localConversations,
+        )..where((t) => t.id.equals(existingMessage.conversationId))).write(
           LocalConversationsCompanion(
             lastMessageId: Value(serverId),
             lastMessagePreview: Value(existingMessage.body),
@@ -367,18 +370,18 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     final now = DateTime.now();
 
     await transaction(() async {
-      await (update(localMessages)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .write(
+      await (update(
+        localMessages,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
         LocalMessagesCompanion(
           status: const Value('failed'),
           locallyUpdatedAt: Value(now),
         ),
       );
 
-      await (update(localOutbox)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .write(
+      await (update(
+        localOutbox,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
         LocalOutboxCompanion(
           status: const Value('failed'),
           lastError: Value(error),
@@ -394,19 +397,20 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
 
   Future<LocalMessage?> findMessageByClientMessageId(String clientMessageId) {
     return (select(localMessages)
-      ..where((t) => t.clientMessageId.equals(clientMessageId)))
+          ..where((t) => t.clientMessageId.equals(clientMessageId)))
         .getSingleOrNull();
   }
 
   Future<LocalMessage?> findMessageByServerId(int serverId) {
-    return (select(localMessages)..where((t) => t.serverId.equals(serverId)))
-        .getSingleOrNull();
+    return (select(
+      localMessages,
+    )..where((t) => t.serverId.equals(serverId))).getSingleOrNull();
   }
 
   Future<LocalConversation?> findConversationById(int conversationId) {
-    return (select(localConversations)
-      ..where((t) => t.id.equals(conversationId)))
-        .getSingleOrNull();
+    return (select(
+      localConversations,
+    )..where((t) => t.id.equals(conversationId))).getSingleOrNull();
   }
 
   Future<bool> applySyncedMessageCreated({
@@ -426,12 +430,12 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       final existingByServerId = await findMessageByServerId(serverId);
 
       final existingByClientMessageId =
-      clientMessageId == null || clientMessageId.isEmpty
+          clientMessageId == null || clientMessageId.isEmpty
           ? null
           : await findMessageByClientMessageId(clientMessageId);
 
-      final alreadyExists = existingByServerId != null ||
-          existingByClientMessageId != null;
+      final alreadyExists =
+          existingByServerId != null || existingByClientMessageId != null;
 
       insertedNewMessage = !alreadyExists;
 
@@ -447,12 +451,12 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
         final unreadCount = resetUnread
             ? 0
             : incrementUnread && insertedNewMessage
-                ? currentConversation.unreadCount + 1
-                : currentConversation.unreadCount;
+            ? currentConversation.unreadCount + 1
+            : currentConversation.unreadCount;
 
-        await (update(localConversations)
-          ..where((t) => t.id.equals(conversationId)))
-            .write(
+        await (update(
+          localConversations,
+        )..where((t) => t.id.equals(conversationId))).write(
           LocalConversationsCompanion(
             lastMessageId: Value(serverId),
             lastMessagePreview: Value(body),
@@ -491,9 +495,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       return;
     }
 
-    await (update(localConversations)
-      ..where((t) => t.id.equals(conversationId)))
-        .write(
+    await (update(
+      localConversations,
+    )..where((t) => t.id.equals(conversationId))).write(
       LocalConversationsCompanion(
         type: type == null ? const Value.absent() : Value(type),
         title: Value(title),
@@ -501,8 +505,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
         lastMessagePreview: Value(lastMessagePreview),
         lastMessageAt: Value(lastMessageAt),
         lastMessageSenderId: Value(lastMessageSenderId),
-        unreadCount:
-        unreadCount == null ? const Value.absent() : Value(unreadCount),
+        unreadCount: unreadCount == null
+            ? const Value.absent()
+            : Value(unreadCount),
         myRole: Value(myRole),
         updatedAt: Value(updatedAt),
         locallyUpdatedAt: Value(DateTime.now()),
@@ -516,17 +521,15 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
 
   Future<List<LocalOutboxData>> getPendingOutboxItems() {
     return (select(localOutbox)
-      ..where((t) => t.status.equals('pending') | t.status.equals('failed'))
-      ..orderBy([
-            (t) => OrderingTerm.asc(t.createdAt),
-      ]))
+          ..where((t) => t.status.equals('pending') | t.status.equals('failed'))
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
         .get();
   }
 
   Future<void> markOutboxSending(String clientMessageId) {
-    return (update(localOutbox)
-      ..where((t) => t.clientMessageId.equals(clientMessageId)))
-        .write(
+    return (update(
+      localOutbox,
+    )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
       LocalOutboxCompanion(
         status: const Value('sending'),
         updatedAt: Value(DateTime.now()),
@@ -539,15 +542,16 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required String error,
     required DateTime nextRetryAt,
   }) async {
-    final current = await (select(localOutbox)
-      ..where((t) => t.clientMessageId.equals(clientMessageId)))
-        .getSingleOrNull();
+    final current =
+        await (select(localOutbox)
+              ..where((t) => t.clientMessageId.equals(clientMessageId)))
+            .getSingleOrNull();
 
     if (current == null) return;
 
-    await (update(localOutbox)
-      ..where((t) => t.clientMessageId.equals(clientMessageId)))
-        .write(
+    await (update(
+      localOutbox,
+    )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
       LocalOutboxCompanion(
         status: const Value('pending'),
         attemptCount: Value(current.attemptCount + 1),
@@ -564,18 +568,18 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     final now = DateTime.now();
 
     await transaction(() async {
-      await (update(localMessages)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .write(
+      await (update(
+        localMessages,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
         LocalMessagesCompanion(
           status: const Value('pending'),
           locallyUpdatedAt: Value(now),
         ),
       );
 
-      await (update(localOutbox)
-        ..where((t) => t.clientMessageId.equals(clientMessageId)))
-          .write(
+      await (update(
+        localOutbox,
+      )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
         LocalOutboxCompanion(
           status: const Value('pending'),
           lastError: const Value(null),
@@ -591,9 +595,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     DateTime? nextRetryAt,
     String? lastError,
   }) {
-    return (update(localOutbox)
-      ..where((t) => t.clientMessageId.equals(clientMessageId)))
-        .write(
+    return (update(
+      localOutbox,
+    )..where((t) => t.clientMessageId.equals(clientMessageId))).write(
       LocalOutboxCompanion(
         status: const Value('pending'),
         nextRetryAt: Value(nextRetryAt),
@@ -609,22 +613,21 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     final now = DateTime.now();
 
     return (select(localOutbox)
-      ..where(
+          ..where(
             (t) =>
-        t.status.equals('pending') &
-        (t.nextRetryAt.isNull() | t.nextRetryAt.isSmallerOrEqualValue(now)),
-      )
-      ..orderBy([
-            (t) => OrderingTerm.asc(t.createdAt),
-      ])
-      ..limit(limit))
+                t.status.equals('pending') &
+                (t.nextRetryAt.isNull() |
+                    t.nextRetryAt.isSmallerOrEqualValue(now)),
+          )
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)])
+          ..limit(limit))
         .get();
   }
 
   Future<int> getConversationUnreadCount(int conversationId) async {
-    final row = await (select(localConversations)
-      ..where((t) => t.id.equals(conversationId)))
-        .getSingleOrNull();
+    final row = await (select(
+      localConversations,
+    )..where((t) => t.id.equals(conversationId))).getSingleOrNull();
 
     return row?.unreadCount ?? 0;
   }
@@ -634,9 +637,9 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   // ---------------------------------------------------------------------------
 
   Future<int> getLastEventId() async {
-    final row = await (select(localSyncState)
-      ..where((t) => t.key.equals('last_event_id')))
-        .getSingleOrNull();
+    final row = await (select(
+      localSyncState,
+    )..where((t) => t.key.equals('last_event_id'))).getSingleOrNull();
 
     return int.tryParse(row?.value ?? '') ?? 0;
   }
@@ -652,16 +655,14 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<String?> getSyncValue(String key) async {
-    final row = await (select(localSyncState)..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (select(
+      localSyncState,
+    )..where((t) => t.key.equals(key))).getSingleOrNull();
 
     return row?.value;
   }
 
-  Future<void> setSyncValue({
-    required String key,
-    required String? value,
-  }) {
+  Future<void> setSyncValue({required String key, required String? value}) {
     return into(localSyncState).insertOnConflictUpdate(
       LocalSyncStateCompanion.insert(
         key: key,
@@ -682,7 +683,7 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
       ..addColumns([countExpression])
       ..where(
         localConversationParticipants.conversationId.equals(conversationId) &
-        localConversationParticipants.leftAt.isNull(),
+            localConversationParticipants.leftAt.isNull(),
       );
 
     final row = await query.getSingleOrNull();
@@ -691,82 +692,112 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Stream<List<LocalConversationParticipantWithUser>>
-  watchConversationParticipantsWithUsersIncludingRemoved(
-      int conversationId,
-      ) {
-    final query = select(localConversationParticipants).join([
-      innerJoin(
-        localUsers,
-        localUsers.id.equalsExp(localConversationParticipants.userId),
-      ),
-    ])
-      ..where(
-        localConversationParticipants.conversationId.equals(conversationId),
-      )
-      ..orderBy([
-        OrderingTerm(
-          expression: localUsers.name,
-          mode: OrderingMode.asc,
-        ),
-      ]);
+  watchConversationParticipantsWithUsersIncludingRemoved(int conversationId) {
+    final query =
+        select(localConversationParticipants).join([
+            innerJoin(
+              localUsers,
+              localUsers.id.equalsExp(localConversationParticipants.userId),
+            ),
+          ])
+          ..where(
+            localConversationParticipants.conversationId.equals(conversationId),
+          )
+          ..orderBy([
+            OrderingTerm(expression: localUsers.name, mode: OrderingMode.asc),
+          ]);
 
     return query.watch().map((rows) {
-      return rows.map((row) {
-        return LocalConversationParticipantWithUser(
-          participant: row.readTable(localConversationParticipants),
-          user: row.readTable(localUsers),
-        );
-      }).toList(growable: false);
+      return rows
+          .map((row) {
+            return LocalConversationParticipantWithUser(
+              participant: row.readTable(localConversationParticipants),
+              user: row.readTable(localUsers),
+            );
+          })
+          .toList(growable: false);
     });
+  }
+
+  Future<List<LocalConversationParticipantWithUser>>
+  getConversationParticipantsWithUsersIncludingRemoved(
+    int conversationId,
+  ) async {
+    final query =
+        select(localConversationParticipants).join([
+            innerJoin(
+              localUsers,
+              localUsers.id.equalsExp(localConversationParticipants.userId),
+            ),
+          ])
+          ..where(
+            localConversationParticipants.conversationId.equals(conversationId),
+          )
+          ..orderBy([
+            OrderingTerm(expression: localUsers.name, mode: OrderingMode.asc),
+          ]);
+
+    final rows = await query.get();
+
+    return rows
+        .map((row) {
+          return LocalConversationParticipantWithUser(
+            participant: row.readTable(localConversationParticipants),
+            user: row.readTable(localUsers),
+          );
+        })
+        .toList(growable: false);
   }
 
   Stream<List<LocalConversationParticipantWithUser>>
   watchConversationParticipantsWithUsers(int conversationId) {
-    final query = select(localConversationParticipants).join([
-      innerJoin(
-        localUsers,
-        localUsers.id.equalsExp(localConversationParticipants.userId),
-      ),
-    ])
-      ..where(
-        localConversationParticipants.conversationId.equals(conversationId) &
-        localConversationParticipants.leftAt.isNull(),
-      )
-      ..orderBy([
-        OrderingTerm(
-          expression: localConversationParticipants.role,
-          mode: OrderingMode.desc,
-        ),
-        OrderingTerm(
-          expression: localUsers.name,
-          mode: OrderingMode.asc,
-        ),
-      ]);
+    final query =
+        select(localConversationParticipants).join([
+            innerJoin(
+              localUsers,
+              localUsers.id.equalsExp(localConversationParticipants.userId),
+            ),
+          ])
+          ..where(
+            localConversationParticipants.conversationId.equals(
+                  conversationId,
+                ) &
+                localConversationParticipants.leftAt.isNull(),
+          )
+          ..orderBy([
+            OrderingTerm(
+              expression: localConversationParticipants.role,
+              mode: OrderingMode.desc,
+            ),
+            OrderingTerm(expression: localUsers.name, mode: OrderingMode.asc),
+          ]);
 
     return query.watch().map((rows) {
-      return rows.map((row) {
-        return LocalConversationParticipantWithUser(
-          participant: row.readTable(localConversationParticipants),
-          user: row.readTable(localUsers),
-        );
-      }).toList(growable: false);
+      return rows
+          .map((row) {
+            return LocalConversationParticipantWithUser(
+              participant: row.readTable(localConversationParticipants),
+              user: row.readTable(localUsers),
+            );
+          })
+          .toList(growable: false);
     });
   }
 
   Future<LocalUser?> findLocalUserById(int userId) {
-    return (select(localUsers)..where((t) => t.id.equals(userId)))
-        .getSingleOrNull();
+    return (select(
+      localUsers,
+    )..where((t) => t.id.equals(userId))).getSingleOrNull();
   }
 
   Future<LocalConversationParticipant?> findParticipant({
     required int conversationId,
     required int userId,
   }) {
-    return (select(localConversationParticipants)
-      ..where(
-            (t) => t.conversationId.equals(conversationId) &
-        t.userId.equals(userId),
-      ))
+    return (select(localConversationParticipants)..where(
+          (t) =>
+              t.conversationId.equals(conversationId) & t.userId.equals(userId),
+        ))
         .getSingleOrNull();
   }
 
@@ -775,11 +806,11 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> upsertParticipant(
-      LocalConversationParticipantsCompanion participant,
-      ) {
-    return into(localConversationParticipants).insertOnConflictUpdate(
-      participant,
-    );
+    LocalConversationParticipantsCompanion participant,
+  ) {
+    return into(
+      localConversationParticipants,
+    ).insertOnConflictUpdate(participant);
   }
 
   Future<void> upsertConversationDetails({
@@ -792,10 +823,7 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
 
       if (users.isNotEmpty) {
         await batch((batch) {
-          batch.insertAllOnConflictUpdate(
-            localUsers,
-            users,
-          );
+          batch.insertAllOnConflictUpdate(localUsers, users);
         });
       }
 
@@ -815,17 +843,16 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required int userId,
     required DateTime leftAt,
   }) {
-    return (update(localConversationParticipants)
-      ..where(
-            (t) => t.conversationId.equals(conversationId) &
-        t.userId.equals(userId),
-      ))
+    return (update(localConversationParticipants)..where(
+          (t) =>
+              t.conversationId.equals(conversationId) & t.userId.equals(userId),
+        ))
         .write(
-      LocalConversationParticipantsCompanion(
-        leftAt: Value(leftAt),
-        locallyUpdatedAt: Value(DateTime.now()),
-      ),
-    );
+          LocalConversationParticipantsCompanion(
+            leftAt: Value(leftAt),
+            locallyUpdatedAt: Value(DateTime.now()),
+          ),
+        );
   }
 
   Future<void> updateParticipantRole({
@@ -833,18 +860,17 @@ class ChatLocalDao extends DatabaseAccessor<AppDatabase>
     required int userId,
     required String role,
   }) {
-    return (update(localConversationParticipants)
-      ..where(
-            (t) => t.conversationId.equals(conversationId) &
-        t.userId.equals(userId),
-      ))
+    return (update(localConversationParticipants)..where(
+          (t) =>
+              t.conversationId.equals(conversationId) & t.userId.equals(userId),
+        ))
         .write(
-      LocalConversationParticipantsCompanion(
-        role: Value(role),
-        leftAt: const Value(null),
-        locallyUpdatedAt: Value(DateTime.now()),
-      ),
-    );
+          LocalConversationParticipantsCompanion(
+            role: Value(role),
+            leftAt: const Value(null),
+            locallyUpdatedAt: Value(DateTime.now()),
+          ),
+        );
   }
 }
 

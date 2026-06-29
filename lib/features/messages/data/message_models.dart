@@ -2,10 +2,7 @@ class MessageHistoryResponse {
   final List<ServerMessageModel> data;
   final MessageHistoryMeta meta;
 
-  const MessageHistoryResponse({
-    required this.data,
-    required this.meta,
-  });
+  const MessageHistoryResponse({required this.data, required this.meta});
 
   factory MessageHistoryResponse.fromJson(Map<String, dynamic> json) {
     final rawData = json['data'] as List<dynamic>? ?? [];
@@ -13,10 +10,8 @@ class MessageHistoryResponse {
     return MessageHistoryResponse(
       data: rawData
           .map(
-            (item) => ServerMessageModel.fromJson(
-          item as Map<String, dynamic>,
-        ),
-      )
+            (item) => ServerMessageModel.fromJson(item as Map<String, dynamic>),
+          )
           .toList(),
       meta: MessageHistoryMeta.fromJson(
         json['meta'] as Map<String, dynamic>? ?? const {},
@@ -102,16 +97,16 @@ class ServerMessageModel {
       status: json['status']?.toString() ?? 'sent',
       sender: json['sender'] is Map
           ? ServerMessageSenderModel.fromJson(
-        Map<String, dynamic>.from(json['sender'] as Map),
-      )
+              Map<String, dynamic>.from(json['sender'] as Map),
+            )
           : null,
       receipts: rawReceipts
           .whereType<Map>()
           .map(
             (item) => ServerMessageReceiptModel.fromJson(
-          Map<String, dynamic>.from(item),
-        ),
-      )
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
     );
   }
@@ -148,11 +143,15 @@ class ServerMessageSenderModel {
   final int id;
   final String name;
   final String email;
+  final String? avatarUrl;
+  final bool isDeleted;
 
   const ServerMessageSenderModel({
     required this.id,
     required this.name,
     required this.email,
+    required this.avatarUrl,
+    required this.isDeleted,
   });
 
   factory ServerMessageSenderModel.fromJson(Map<String, dynamic> json) {
@@ -160,6 +159,8 @@ class ServerMessageSenderModel {
       id: _requiredInt(json['id'], 'sender.id'),
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      avatarUrl: json['avatar_url']?.toString(),
+      isDeleted: _parseBool(json['is_deleted']) ?? false,
     );
   }
 }
@@ -218,16 +219,26 @@ DateTime? _parseDateTime(dynamic value) {
   return DateTime.tryParse(text);
 }
 
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+
+  if (value is bool) return value;
+
+  if (value is num) return value != 0;
+
+  final normalized = value.toString().trim().toLowerCase();
+
+  if (normalized == 'true' || normalized == '1') return true;
+  if (normalized == 'false' || normalized == '0') return false;
+
+  return null;
+}
+
 Map<String, dynamic> _parseMap(dynamic value) {
   if (value is Map<String, dynamic>) return value;
 
   if (value is Map) {
-    return value.map(
-          (key, value) => MapEntry(
-        key.toString(),
-        value,
-      ),
-    );
+    return value.map((key, value) => MapEntry(key.toString(), value));
   }
 
   return <String, dynamic>{};

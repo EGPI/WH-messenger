@@ -1,9 +1,7 @@
 class ConversationDetailsResponse {
   final ConversationDetailsModel data;
 
-  const ConversationDetailsResponse({
-    required this.data,
-  });
+  const ConversationDetailsResponse({required this.data});
 
   factory ConversationDetailsResponse.fromJson(Map<String, dynamic> json) {
     return ConversationDetailsResponse(
@@ -47,9 +45,9 @@ class ConversationDetailsModel {
           .whereType<Map>()
           .map(
             (item) => ConversationParticipantModel.fromJson(
-          Map<String, dynamic>.from(item),
-        ),
-      )
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
     );
   }
@@ -64,9 +62,7 @@ class ConversationMemberActionResponse {
     required this.data,
   });
 
-  factory ConversationMemberActionResponse.fromJson(
-      Map<String, dynamic> json,
-      ) {
+  factory ConversationMemberActionResponse.fromJson(Map<String, dynamic> json) {
     return ConversationMemberActionResponse(
       message: json['message']?.toString() ?? '',
       data: ConversationParticipantModel.fromJson(
@@ -84,6 +80,7 @@ class ConversationParticipantModel {
   final String? avatarUrl;
   final String? phone;
   final bool isActive;
+  final bool isDeleted;
   final DateTime? lastSeenAt;
   final String? role;
   final DateTime? joinedAt;
@@ -97,6 +94,7 @@ class ConversationParticipantModel {
     required this.avatarUrl,
     required this.phone,
     required this.isActive,
+    required this.isDeleted,
     required this.lastSeenAt,
     required this.role,
     required this.joinedAt,
@@ -112,6 +110,7 @@ class ConversationParticipantModel {
       avatarUrl: json['avatar_url']?.toString(),
       phone: json['phone']?.toString(),
       isActive: _parseBool(json['is_active']) ?? true,
+      isDeleted: _parseBool(json['is_deleted']) ?? false,
       lastSeenAt: _parseDateTime(json['last_seen_at']),
       role: json['role']?.toString(),
       joinedAt: _parseDateTime(json['joined_at']),
@@ -127,6 +126,7 @@ class ConversationParticipantModel {
     String? avatarUrl,
     String? phone,
     bool? isActive,
+    bool? isDeleted,
     DateTime? lastSeenAt,
     String? role,
     DateTime? joinedAt,
@@ -140,6 +140,7 @@ class ConversationParticipantModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       phone: phone ?? this.phone,
       isActive: isActive ?? this.isActive,
+      isDeleted: isDeleted ?? this.isDeleted,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       role: role ?? this.role,
       joinedAt: joinedAt ?? this.joinedAt,

@@ -13,10 +13,10 @@ import '../../data/realtime_config.dart';
 import '../../data/realtime_event_models.dart';
 import 'realtime_connection_state.dart';
 
-final realtimeConnectionControllerProvider = NotifierProvider<
-    RealtimeConnectionController, RealtimeConnectionState>(
-  RealtimeConnectionController.new,
-);
+final realtimeConnectionControllerProvider =
+    NotifierProvider<RealtimeConnectionController, RealtimeConnectionState>(
+      RealtimeConnectionController.new,
+    );
 
 class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
   WebSocketChannel? _channel;
@@ -51,9 +51,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
     return const RealtimeConnectionState.disconnected();
   }
 
-  Future<void> connect({
-    required int userId,
-  }) async {
+  Future<void> connect({required int userId}) async {
     if (_isConnecting) return;
 
     if (_connectedUserId == userId &&
@@ -82,6 +80,8 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
         Uri.parse(RealtimeConfig.websocketUrl),
       );
 
+      unawaited(_watchSocketReady(_channel!));
+
       _subscription = _channel!.stream.listen(
         _handleRawFrame,
         onError: _handleSocketError,
@@ -97,6 +97,16 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
       _scheduleReconnect();
     } finally {
       _isConnecting = false;
+    }
+  }
+
+  Future<void> _watchSocketReady(WebSocketChannel channel) async {
+    try {
+      await channel.ready;
+    } catch (error) {
+      if (!identical(channel, _channel)) return;
+
+      _handleSocketError(error);
     }
   }
 
@@ -135,9 +145,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
   Future<void> _handleRawFrame(dynamic rawFrame) async {
     if (rawFrame is! String) return;
 
-    final frame = Map<String, dynamic>.from(
-      jsonDecode(rawFrame) as Map,
-    );
+    final frame = Map<String, dynamic>.from(jsonDecode(rawFrame) as Map);
 
     final eventName = frame['event']?.toString() ?? '';
 
@@ -180,17 +188,13 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
     await _handleChatEvent(frame);
   }
 
-  Future<void> _handleConnectionEstablished(
-      Map<String, dynamic> frame,
-      ) async {
+  Future<void> _handleConnectionEstablished(Map<String, dynamic> frame) async {
     final rawData = frame['data'];
 
     final Map<String, dynamic> data;
 
     if (rawData is String) {
-      data = Map<String, dynamic>.from(
-        jsonDecode(rawData) as Map,
-      );
+      data = Map<String, dynamic>.from(jsonDecode(rawData) as Map);
     } else if (rawData is Map) {
       data = Map<String, dynamic>.from(rawData);
     } else {
@@ -217,10 +221,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
     final userId = _connectedUserId;
     if (userId == null) return;
 
-    await _subscribePrivateUserChannel(
-      userId: userId,
-      socketId: socketId,
-    );
+    await _subscribePrivateUserChannel(userId: userId, socketId: socketId);
   }
 
   Future<void> _subscribePrivateUserChannel({
@@ -236,10 +237,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
 
     _sendFrame({
       'event': 'pusher:subscribe',
-      'data': {
-        'auth': auth,
-        'channel': channelName,
-      },
+      'data': {'auth': auth, 'channel': channelName},
     });
   }
 
@@ -258,10 +256,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
 
     final response = await dio.post(
       RealtimeConfig.authEndpoint,
-      data: {
-        'socket_id': socketId,
-        'channel_name': channelName,
-      },
+      data: {'socket_id': socketId, 'channel_name': channelName},
       options: Options(
         headers: {
           'Authorization': 'Bearer $token',
@@ -404,9 +399,7 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
   void _handleSocketDone() {
     if (_isManuallyDisconnected) return;
 
-    state = state.copyWith(
-      status: RealtimeConnectionStatus.reconnecting,
-    );
+    state = state.copyWith(status: RealtimeConnectionStatus.reconnecting);
 
     _scheduleReconnect();
   }
@@ -428,15 +421,9 @@ class RealtimeConnectionController extends Notifier<RealtimeConnectionState> {
   void _startPingTimer() {
     _pingTimer?.cancel();
 
-    _pingTimer = Timer.periodic(
-      const Duration(seconds: 25),
-          (_) {
-        _sendFrame({
-          'event': 'pusher:ping',
-          'data': {},
-        });
-      },
-    );
+    _pingTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      _sendFrame({'event': 'pusher:ping', 'data': {}});
+    });
   }
 
   void _sendFrame(Map<String, dynamic> frame) {

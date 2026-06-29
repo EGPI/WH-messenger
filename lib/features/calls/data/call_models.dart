@@ -2,17 +2,12 @@ class CallResponseModel {
   final String? message;
   final CallModel data;
 
-  const CallResponseModel({
-    required this.message,
-    required this.data,
-  });
+  const CallResponseModel({required this.message, required this.data});
 
   factory CallResponseModel.fromJson(Map<String, dynamic> json) {
     return CallResponseModel(
       message: json['message']?.toString(),
-      data: CallModel.fromJson(
-        _asMap(json['data']),
-      ),
+      data: CallModel.fromJson(_asMap(json['data'])),
     );
   }
 }
@@ -20,15 +15,11 @@ class CallResponseModel {
 class CallDetailsResponseModel {
   final CallModel data;
 
-  const CallDetailsResponseModel({
-    required this.data,
-  });
+  const CallDetailsResponseModel({required this.data});
 
   factory CallDetailsResponseModel.fromJson(Map<String, dynamic> json) {
     return CallDetailsResponseModel(
-      data: CallModel.fromJson(
-        _asMap(json['data']),
-      ),
+      data: CallModel.fromJson(_asMap(json['data'])),
     );
   }
 }
@@ -152,9 +143,7 @@ class CallParticipantModel {
       joinedAt: _parseDateTime(json['joined_at']),
       leftAt: _parseDateTime(json['left_at']),
       user: json['user'] is Map<String, dynamic>
-          ? CallUserModel.fromJson(
-        json['user'] as Map<String, dynamic>,
-      )
+          ? CallUserModel.fromJson(json['user'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -175,12 +164,16 @@ class CallUserModel {
   final String name;
   final String email;
   final String? avatarUrl;
+  final bool isActive;
+  final bool isDeleted;
 
   const CallUserModel({
     required this.id,
     required this.name,
     required this.email,
     required this.avatarUrl,
+    required this.isActive,
+    required this.isDeleted,
   });
 
   factory CallUserModel.fromJson(Map<String, dynamic> json) {
@@ -189,6 +182,8 @@ class CallUserModel {
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       avatarUrl: json['avatar_url']?.toString(),
+      isActive: _parseBool(json['is_active']) ?? true,
+      isDeleted: _parseBool(json['is_deleted']) ?? false,
     );
   }
 }
@@ -197,16 +192,10 @@ class CallSignalRequestModel {
   final String type;
   final Map<String, dynamic> payload;
 
-  const CallSignalRequestModel({
-    required this.type,
-    required this.payload,
-  });
+  const CallSignalRequestModel({required this.type, required this.payload});
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'payload': payload,
-    };
+    return {'type': type, 'payload': payload};
   }
 }
 
@@ -278,12 +267,7 @@ Map<String, dynamic> _asMap(dynamic value) {
   if (value is Map<String, dynamic>) return value;
 
   if (value is Map) {
-    return value.map(
-          (key, value) => MapEntry(
-        key.toString(),
-        value,
-      ),
-    );
+    return value.map((key, value) => MapEntry(key.toString(), value));
   }
 
   return <String, dynamic>{};
@@ -309,4 +293,19 @@ DateTime? _parseDateTime(dynamic value) {
   if (text.isEmpty) return null;
 
   return DateTime.tryParse(text);
+}
+
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+
+  if (value is bool) return value;
+
+  if (value is num) return value != 0;
+
+  final normalized = value.toString().trim().toLowerCase();
+
+  if (normalized == 'true' || normalized == '1') return true;
+  if (normalized == 'false' || normalized == '0') return false;
+
+  return null;
 }

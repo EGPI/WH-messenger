@@ -10,10 +10,7 @@ import '../providers/message_screen_providers.dart';
 class MessageInputBar extends ConsumerStatefulWidget {
   final int conversationId;
 
-  const MessageInputBar({
-    super.key,
-    required this.conversationId,
-  });
+  const MessageInputBar({super.key, required this.conversationId});
 
   @override
   ConsumerState<MessageInputBar> createState() => _MessageInputBarState();
@@ -94,10 +91,7 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
 
     await ref
         .read(messageScreenControllerProvider(widget.conversationId).notifier)
-        .sendMessage(
-      senderId: currentUserId,
-      body: trimmed,
-    );
+        .sendMessage(senderId: currentUserId, body: trimmed);
 
     if (mounted) {
       _focusNode.requestFocus();
@@ -107,8 +101,9 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
   @override
   Widget build(BuildContext context) {
     final isSending = ref.watch(
-      messageScreenControllerProvider(widget.conversationId)
-          .select((state) => state.isSending),
+      messageScreenControllerProvider(
+        widget.conversationId,
+      ).select((state) => state.isSending),
     );
 
     final sendPermission = ref.watch(
@@ -128,9 +123,7 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.82),
               border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.92),
-                ),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.92)),
               ),
               boxShadow: [
                 BoxShadow(
@@ -145,7 +138,8 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
               children: [
                 if (!canSend)
                   _SendBlockedReasonBanner(
-                    message: sendPermission.blockedReason ??
+                    message:
+                        sendPermission.blockedReason ??
                         announcementSendBlockedReason,
                   ),
                 Row(
@@ -188,7 +182,8 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
                           decoration: InputDecoration(
                             hintText: canSend
                                 ? 'Type a message...'
-                                : 'Read-only announcement',
+                                : sendPermission.blockedReason ??
+                                      announcementSendBlockedReason,
                             hintStyle: const TextStyle(
                               color: Color(0xFF8A98AA),
                               fontWeight: FontWeight.w600,
@@ -225,9 +220,7 @@ class _MessageInputBarState extends ConsumerState<MessageInputBar> {
 class _SendBlockedReasonBanner extends StatelessWidget {
   final String message;
 
-  const _SendBlockedReasonBanner({
-    required this.message,
-  });
+  const _SendBlockedReasonBanner({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -236,16 +229,11 @@ class _SendBlockedReasonBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 9),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.14),
-        ),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.14)),
       ),
       child: Row(
         children: [
@@ -295,23 +283,20 @@ class _SendButton extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: enabled
             ? LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.primary,
-            const Color(0xFF0D47A1),
-          ],
-        )
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [colorScheme.primary, const Color(0xFF0D47A1)],
+              )
             : null,
         color: enabled ? null : const Color(0xFFD5DEEA),
         boxShadow: enabled
             ? [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 9),
-          ),
-        ]
+                BoxShadow(
+                  color: colorScheme.primary.withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 9),
+                ),
+              ]
             : [],
       ),
       child: Material(
@@ -325,19 +310,19 @@ class _SendButton extends StatelessWidget {
               duration: const Duration(milliseconds: 180),
               child: isSending
                   ? const SizedBox.square(
-                key: ValueKey('sending'),
-                dimension: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+                      key: ValueKey('sending'),
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(
-                Icons.send_rounded,
-                key: ValueKey('send'),
-                color: Colors.white,
-                size: 21,
-              ),
+                      Icons.send_rounded,
+                      key: ValueKey('send'),
+                      color: Colors.white,
+                      size: 21,
+                    ),
             ),
           ),
         ),

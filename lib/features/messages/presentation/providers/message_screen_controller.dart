@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../auth/presentation/providers/auth_controller.dart';
 import '../../data/message_send_error_classifier.dart';
 import '../../../../core/database/app_database_provider.dart';
 import '../../data/message_api.dart';
@@ -10,23 +11,28 @@ import 'message_screen_providers.dart';
 import 'message_screen_state.dart';
 import '../../../../core/database/daos/chat_local_dao.dart';
 
-final messageScreenControllerProvider = StateNotifierProvider.family<
-    MessageScreenController, MessageScreenState, int>(
-      (ref, conversationId) {
-    return MessageScreenController(
-      conversationId: conversationId,
-      api: ref.watch(messageApiProvider),
-      dao: ref.watch(chatLocalDaoProvider),
-    );
-  },
-);
+final messageScreenControllerProvider =
+    StateNotifierProvider.family<
+      MessageScreenController,
+      MessageScreenState,
+      int
+    >((ref, conversationId) {
+      return MessageScreenController(
+        ref: ref,
+        conversationId: conversationId,
+        api: ref.watch(messageApiProvider),
+        dao: ref.watch(chatLocalDaoProvider),
+      );
+    });
 
 class MessageScreenController extends StateNotifier<MessageScreenState> {
+  final Ref ref;
   final int conversationId;
   final MessageApi api;
   final ChatLocalDao dao;
 
   MessageScreenController({
+    required this.ref,
     required this.conversationId,
     required this.api,
     required this.dao,
@@ -35,10 +41,7 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
   Future<void> openConversation() async {
     if (state.isInitialSyncing) return;
 
-    state = state.copyWith(
-      isInitialSyncing: true,
-      clearError: true,
-    );
+    state = state.copyWith(isInitialSyncing: true, clearError: true);
 
     try {
       final response = await api.fetchMessages(
@@ -56,14 +59,16 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
         );
       }
 
-      final companions =
-      response.data.map((message) => message.toLocalCompanion()).toList();
+      final companions = response.data
+          .map((message) => message.toLocalCompanion())
+          .toList();
 
       await dao.upsertServerMessagesSafely(
         companions,
         serverIds: response.data.map((message) => message.id).toList(),
-        clientMessageIds:
-        response.data.map((message) => message.clientMessageId).toList(),
+        clientMessageIds: response.data
+            .map((message) => message.clientMessageId)
+            .toList(),
       );
 
       debugPrint(
@@ -94,20 +99,15 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
   Future<void> loadOlderMessages() async {
     if (state.isLoadingOlder || !state.hasMoreOlder) return;
 
-    state = state.copyWith(
-      isLoadingOlder: true,
-      clearError: true,
-    );
+    state = state.copyWith(isLoadingOlder: true, clearError: true);
 
     try {
-      final oldestServerMessageId =
-      await dao.getOldestServerMessageId(conversationId);
+      final oldestServerMessageId = await dao.getOldestServerMessageId(
+        conversationId,
+      );
 
       if (oldestServerMessageId == null) {
-        state = state.copyWith(
-          isLoadingOlder: false,
-          hasMoreOlder: false,
-        );
+        state = state.copyWith(isLoadingOlder: false, hasMoreOlder: false);
         return;
       }
 
@@ -120,8 +120,9 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
       await dao.upsertServerMessagesSafely(
         response.data.map((message) => message.toLocalCompanion()).toList(),
         serverIds: response.data.map((message) => message.id).toList(),
-        clientMessageIds:
-        response.data.map((message) => message.clientMessageId).toList(),
+        clientMessageIds: response.data
+            .map((message) => message.clientMessageId)
+            .toList(),
       );
 
       state = state.copyWith(
@@ -153,16 +154,30 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
     final trimmedBody = body.trim();
 
     if (trimmedBody.isEmpty) {
-      state = state.copyWith(
-        errorMessage: 'Message cannot be empty.',
-      );
+      state = state.copyWith(errorMessage: 'Message cannot be empty.');
       return;
     }
     final conversation = await dao.findConversationById(conversationId);
+    final normalizedType = conversation?.type.trim().toLowerCase();
+    final mightBeDirect = normalizedType == null || normalizedType == 'direct';
+    final titleIsDeletedUser = isDeletedAccountName(conversation?.title);
+    final currentUserId = ref.read(
+      authControllerProvider.select((state) => state.user?.id),
+    );
+    final peerStatus = mightBeDirect
+        ? directChatPeerStatusFromParticipants(
+            participants: await dao
+                .getConversationParticipantsWithUsersIncludingRemoved(
+                  conversationId,
+                ),
+            currentUserId: currentUserId,
+          )
+        : const DirectChatPeerStatus.available();
 
     final permission = MessageSendPermission.fromConversation(
       type: conversation?.type,
       myRole: conversation?.myRole,
+      isDirectPeerDeleted: titleIsDeletedUser || peerStatus.isDeletedOrInactive,
     );
 
     if (!permission.canSend) {
@@ -183,10 +198,7 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
       body: trimmedBody,
     );
 
-    state = state.copyWith(
-      isSending: true,
-      clearError: true,
-    );
+    state = state.copyWith(isSending: true, clearError: true);
 
     try {
       // 2. Send to Laravel using the same client_message_id.
@@ -196,7 +208,8 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
         body: trimmedBody,
       );
 
-      final serverReceivedAt = serverMessage.serverReceivedAt ??
+      final serverReceivedAt =
+          serverMessage.serverReceivedAt ??
           serverMessage.sentAt ??
           serverMessage.createdAt ??
           DateTime.fromMillisecondsSinceEpoch(0);
@@ -209,9 +222,7 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
         serverReceivedAt: serverReceivedAt,
       );
 
-      state = state.copyWith(
-        isSending: false,
-      );
+      state = state.copyWith(isSending: false);
     } catch (error) {
       final action = classifySendFailure(error);
       final message = sendFailureMessage(error);
@@ -229,10 +240,7 @@ class MessageScreenController extends StateNotifier<MessageScreenState> {
         );
       }
 
-      state = state.copyWith(
-        isSending: false,
-        errorMessage: message,
-      );
+      state = state.copyWith(isSending: false, errorMessage: message);
     }
   }
 

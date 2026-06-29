@@ -68,12 +68,12 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
 
     ref.listen(
       conversationsControllerProvider.select((state) => state.errorMessage),
-          (previous, next) {
+      (previous, next) {
         if (next == null || next == previous) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next)));
       },
     );
 
@@ -94,10 +94,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
             child: const SizedBox.expand(),
           ),
         ),
-        actions: const [
-          _LogoutButton(),
-          SizedBox(width: 8),
-        ],
+        actions: const [_AccountMenuButton(), SizedBox(width: 8)],
       ),
       body: Stack(
         children: [
@@ -167,9 +164,9 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withValues(
-                alpha: 0.28,
-              ),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.28),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -184,9 +181,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
           icon: const Icon(Icons.chat_rounded),
           label: const Text(
             'New chat',
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w900),
           ),
         ),
       ),
@@ -198,10 +193,7 @@ class _ChatsHeroHeader extends StatelessWidget {
   final bool isSyncing;
   final DateTime? lastSyncedAt;
 
-  const _ChatsHeroHeader({
-    required this.isSyncing,
-    required this.lastSyncedAt,
-  });
+  const _ChatsHeroHeader({required this.isSyncing, required this.lastSyncedAt});
 
   @override
   Widget build(BuildContext context) {
@@ -217,10 +209,7 @@ class _ChatsHeroHeader extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primary,
-              const Color(0xFF0D47A1),
-            ],
+            colors: [colorScheme.primary, const Color(0xFF0D47A1)],
           ),
           boxShadow: [
             BoxShadow(
@@ -238,9 +227,7 @@ class _ChatsHeroHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.20),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
               ),
               child: const Icon(
                 Icons.forum_rounded,
@@ -283,27 +270,27 @@ class _ChatsHeroHeader extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               child: isSyncing
                   ? const SizedBox.square(
-                key: ValueKey('syncing'),
-                dimension: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  color: Colors.white,
-                ),
-              )
+                      key: ValueKey('syncing'),
+                      dimension: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
                   : Container(
-                key: const ValueKey('synced'),
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
+                      key: const ValueKey('synced'),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -320,21 +307,108 @@ class _ChatsHeroHeader extends StatelessWidget {
   }
 }
 
-class _LogoutButton extends ConsumerWidget {
-  const _LogoutButton();
+class _AccountMenuButton extends ConsumerWidget {
+  const _AccountMenuButton();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
-      tooltip: 'Logout',
-      onPressed: () {
-        ref.read(openConversationIdProvider.notifier).state = null;
-        ref.read(authControllerProvider.notifier).logout();
+    return PopupMenuButton<_AccountMenuAction>(
+      tooltip: 'Account options',
+      icon: const Icon(Icons.more_vert_rounded),
+      onSelected: (action) async {
+        switch (action) {
+          case _AccountMenuAction.logout:
+            ref.read(openConversationIdProvider.notifier).state = null;
+            await ref.read(authControllerProvider.notifier).logout();
+            return;
+          case _AccountMenuAction.deleteAccount:
+            await _confirmDeleteAccount(context, ref);
+            return;
+        }
       },
-      icon: const Icon(Icons.logout_rounded),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _AccountMenuAction.logout,
+          child: Row(
+            children: [
+              Icon(Icons.logout_rounded),
+              SizedBox(width: 10),
+              Text('Logout'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _AccountMenuAction.deleteAccount,
+          child: Row(
+            children: [
+              Icon(Icons.delete_forever_rounded, color: Color(0xFFD32F2F)),
+              SizedBox(width: 10),
+              Text(
+                'Delete account',
+                style: TextStyle(color: Color(0xFFD32F2F)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete account?'),
+          content: const Text(
+            'Your account will be disabled and you will be logged out on this device.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFD32F2F),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.delete_forever_rounded),
+              label: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    ref.read(openConversationIdProvider.notifier).state = null;
+
+    final deleted = await ref
+        .read(authControllerProvider.notifier)
+        .deleteAccount();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          deleted
+              ? 'Account deleted successfully.'
+              : ref.read(authControllerProvider).errorMessage ??
+                    'Could not delete account. Please try again.',
+        ),
+      ),
     );
   }
 }
+
+enum _AccountMenuAction { logout, deleteAccount }
 
 class _EmptyConversationsView extends StatelessWidget {
   const _EmptyConversationsView();
@@ -430,9 +504,7 @@ class _ConversationSkeletonTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.92),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.92)),
       ),
       child: Row(
         children: [
@@ -561,11 +633,7 @@ class _ChatsBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFEAF4FF),
-            Color(0xFFF8FBFF),
-            Color(0xFFEFF6FF),
-          ],
+          colors: [Color(0xFFEAF4FF), Color(0xFFF8FBFF), Color(0xFFEFF6FF)],
         ),
       ),
       child: Stack(
@@ -573,18 +641,12 @@ class _ChatsBackground extends StatelessWidget {
           Positioned(
             top: -120,
             right: -80,
-            child: _BlurCircle(
-              size: 240,
-              color: Color(0xFF90CAF9),
-            ),
+            child: _BlurCircle(size: 240, color: Color(0xFF90CAF9)),
           ),
           Positioned(
             bottom: -130,
             left: -90,
-            child: _BlurCircle(
-              size: 250,
-              color: Color(0xFF1565C0),
-            ),
+            child: _BlurCircle(size: 250, color: Color(0xFF1565C0)),
           ),
         ],
       ),
@@ -596,10 +658,7 @@ class _BlurCircle extends StatelessWidget {
   final double size;
   final Color color;
 
-  const _BlurCircle({
-    required this.size,
-    required this.color,
-  });
+  const _BlurCircle({required this.size, required this.color});
 
   @override
   Widget build(BuildContext context) {

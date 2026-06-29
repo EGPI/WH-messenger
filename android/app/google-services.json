@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "667503805021",
+    "project_id": "company-chat-app-49267",
+    "storage_bucket": "company-chat-app-49267.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:667503805021:android:3ab8136862a1c39daf83b4",
+        "android_client_info": {
+          "package_name": "com.omegacure.egpi_chat_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZY1Dl8X0_wADYzd5O0whKlgIJnq8nzp0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,7 +1,7 @@
 name: egpi_chat_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.0.1+5
 
 environment:
   sdk: ^3.11.5
@@ -60,6 +60,7 @@ dependencies:
   permission_handler: ^12.0.1
 
   device_info_plus: ^11.2.0
+  package_info_plus: ^9.0.1
   app_version_update: ^6.2.0
 
   # Localization
@@ -70,6 +71,8 @@ dependencies:
   web_socket_channel: ^3.0.3
   flutter_webrtc: ^1.4.1
   flutter_foreground_task: ^9.2.2
+  firebase_core: ^4.11.0
+  firebase_messaging: ^16.4.1
 
 dev_dependencies:
   flutter_test:
