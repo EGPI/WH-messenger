@@ -26,7 +26,7 @@ class ChatApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Chat App',
+      title: 'World Health Messenger',
       theme: AppTheme.light(),
       routerConfig: router,
       builder: (context, child) {

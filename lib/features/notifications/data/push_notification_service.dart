@@ -244,6 +244,8 @@ class PushNotificationService {
   }
 
   Future<void> _requestPermission() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) return;
+
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
       announcement: false,
